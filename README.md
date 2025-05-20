@@ -85,8 +85,8 @@ The kickstart supports two modes of deployments
 - 1 GPU with 24GB of VRAM for the LLM, refer to the chart below
 - 1 GPU with 24GB of VRAM for the safety/shield model (optional)
 - [Hugging Face Token](https://huggingface.co/settings/tokens)
-- Access to [Meta Llama](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct/) model.
-- Access to [Meta Llama Guard](https://huggingface.co/meta-llama/Llama-Guard-3-8B/) model.
+- Access to [Meta Llama 3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct/) model.
+- Access to [Meta Llama Guard 3-8B](https://huggingface.co/meta-llama/Llama-Guard-3-8B/) model.
 - Some of the example scripts use `jq` a JSON parsing utility which you can acquire via `brew install jq`
 
 ### Supported Models
@@ -117,10 +117,8 @@ git clone https://github.com/rh-ai-kickstart/RAG
 oc login --server="<cluster-api-endpoint>" --token="sha256~XYZ"
 ```
 
-3. If the GPU nodes are tainted, find the taint key. You will have to pass in the
+3. If the GPU nodes are tainted, find the taint key. You will have to pass the taint to the
    make command to ensure that the llm pods are deployed on the tainted nodes with GPU.
-   In the example below the key for the taint is `nvidia.com/gpu`
-
 
 ```bash
 oc get nodes -l nvidia.com/gpu.present=true -o yaml | grep -A 3 taint 
@@ -136,17 +134,35 @@ The output of the command may be something like below
     - effect: NoSchedule
       key: nvidia.com/gpu
       value: "true"
+--
+    taints:
+    - effect: NoSchedule
+      key: odh-notebook
+      value: "true"
 ```
+In the output shown above, `nvidia.com/gpu` is the key for two of the taints and is 
+`odh-notebook` for the third taint.
 
-You can work with your OpenShift cluster admin team to determine what labels and taints identify GPU-enabled worker nodes.  It is also possible that all your worker nodes have GPUs therefore have no distinguishing taint.
 
-4. Navigate to Helm deploy directory
+_You can work with your OpenShift cluster admin team to determine what labels and taints identify GPU-enabled worker nodes.  It is also possible that all your worker nodes have GPUs therefore have no distinguishing taint._
+
+4. Environment variables
+
+Set the following variables that are needed to install this example:
+* `TAINT`=<taint_key_from_above_output>
+* `LLM_MODEL`='llama-3-2-3b-instruct'
+* `LLM_GUARD_MODEL`='llama-guard-3-8b'
+* `RAG_NS`=llama-stack-rag
+   * _If `llama-stack-rag` namespace already exists or is used by someone else, please use a different value for this variable_
+   * _The namespace will be auto-created when the example is installed_
+
+5. Navigate to Helm deploy directory
 
 ```bash
 cd deploy/helm
 ```
 
-5. List available models
+6. List available models
 
 ```bash
 make list-models
@@ -167,38 +183,36 @@ model: llama-guard-3-8b (meta-llama/Llama-Guard-3-8B)
 
 The "guard" models can be used to test shields for profanity, hate speech, violence, etc.
 
-6. Install via make
-
-Use the taint key from above as the `LLM_TOLERATION` and `SAFETY_TOLERATION`
-
-The namespace will be auto-created
+7. Install via make
 
 To install only the RAG example, no shields, use the following command:
 
 ```bash
-make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu"
+make install NAMESPACE=$RAG_NS LLM=$LLM_MODEL LLM_TOLERATION="$TAINT"
 ```
 
 To install both the RAG example as well as the guard model to allow for shields, use the following command:
 
 ```bash
-make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu" SAFETY=llama-guard-3-8b SAFETY_TOLERATION="nvidia.com/gpu"
+make install NAMESPACE=$RAG_NS LLM=$LLM_MODEL LLM_TOLERATION="$TAINT" SAFETY=$LLM_GUARD_MODEL SAFETY_TOLERATION="$TAINT"
 ```
 
 If you have no tainted nodes, perhaps every worker node has a GPU, then you can use a simplified version of the make command
 
 ```bash
-make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-guard-3-8b
+make install NAMESPACE=$RAG_NS LLM=$LLM_MODEL SAFETY=$LLM_GUARD_MODEL
 ```
 
 When prompted, enter your **[Hugging Face Token]((https://huggingface.co/settings/tokens))**.
 
-Note: This process may take 10 to 30 minutes depending on the number and size of models to be downloaded. 
+> [!NOTE]
+> This process may take 10 to 30 minutes depending on the number and size of models to be downloaded.
 
-7. Watch/Monitor
+
+8. Watch/Monitor
 
 ```bash
-oc get pods -n llama-stack-rag
+oc get pods -n $RAG_NS
 ```
 
 ```
@@ -228,31 +242,41 @@ rag-pipeline-notebook-0                                            2/2     Runni
 upload-sample-docs-job-f5k5w                                       0/1     Completed   0          10m
 ```
 
-8. Verify:
+9. Verify:
+
+Run the commands given in this section to verify the various resources installed.
 
 ```bash
-oc get pods -n llama-stack-rag
-oc get svc -n llama-stack-rag
-oc get routes -n llama-stack-rag
+make status NAMESPACE=$RAG_NS
 ```
 
-Note: The key pods to watch include **predictor** in their name, those are the kserve model servers running vLLM
+Above command will show the following resources:
+* Pods
+* Services
+* Routes
+* Secrets
+* PVCs
 
+> [!NOTE]
+> The pod with  **predictor** in it's name is the kserve model server running vLLM
+> and should have **4/4** under the Ready column
+
+Run the following command to get the predictor pod: 
 ```bash
 oc get pods -l component=predictor
 ```
 
-Look for **3/3** under the Ready column
+Run the following command to get the **inferenceservice** that describes the limits, requests, model name,
+serving-runtime, chat-template, etc.
 
-The **inferenceservice** CR describes the limits, requests, model name, serving-runtime, chat-template, etc. 
 
 ```bash
-oc get inferenceservice llama-3-2-3b-instruct \
-  -n llama-stack-rag-1 \
+oc get inferenceservice $LLM_MODEL \
+  -n $RAG_NS \
   -o jsonpath='{.spec.predictor.model}' | jq
 ```
 
-Watch the **llamastack** pod as that one becomes available after all the model servers are up.
+Run the following command to get the **llamastack** pod (_this pod becomes available only after all the model servers are up_)
 
 ```bash
  oc get pods -l app.kubernetes.io/name=llamastack
@@ -291,12 +315,12 @@ Refer to the [post installation](docs/post_installation.md) document for batch d
 ## Uninstalling the RAG application
 
 ```bash
-make uninstall NAMESPACE=llama-stack-rag
+make uninstall NAMESPACE=$RAG_NS
 ```
 or
 
 ```bash
-oc delete project llama-stack-rag
+oc delete project $RAG_NS
 ```
 
 ## Adding a new model
@@ -344,7 +368,7 @@ To add another model follow these steps:
 2. Run the **make** command again to update the project
 
     ```bash
-    make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION="nvidia.com/gpu"
+    make install NAMESPACE=$RAG_NS LLM=$LLM_MODEL LLM_TOLERATION="$TAINT"
     ```
 
     ```bash

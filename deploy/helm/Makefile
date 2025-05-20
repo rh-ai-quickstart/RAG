@@ -18,6 +18,9 @@ HF_TOKEN ?= $(shell bash -c 'read -r -p "Enter Hugging Face Token: " HF_TOKEN; e
 RAG_CHART := rag
 TOLERATIONS_TEMPLATE=[{"key":"$(1)","effect":"NoSchedule","operator":"Exists"}]
 
+# If using extra tools that require API Keys set the LLAMA_STACK_ENV variable with key, value pairs
+# LLAMA_STACK_ENV ?= {Key1: "Value1", Key2: "Value2" etc.}
+
 #ingestion pipeline configuration
 SOURCE ?= S3
 EMBEDDING_MODEL ?= all-MiniLM-L6-v2
@@ -91,6 +94,8 @@ help:
 	@echo "  {SAFETY,LLM}_TOLERATION  - Model pod toleration"
 	@echo "  CUSTOM_INGESTION_PIPELINE_VALUES - Custom ingestion pipeline values (full path)"
 	@echo "  CUSTOM_INGESTION_PIPELINE_NAME   - Custom ingestion pipeline name"
+	@echo "  LLAMA_STACK_ENV          - List of environment variables for llama-stack (eg. {TAVILY_SEARCH_API_KEY: \"<Your Tavily Search API Key here>\"})"
+
 
 # Create namespace and deploy
 namespace:
@@ -107,7 +112,7 @@ list-models: depend
 	@helm template dummy-release $(RAG_CHART) --set llm-service._debugListModels=true | grep ^model:
 
 .PHONY: install
-install: namespace depend
+install: namespace depend delete-jobs
 	@$(eval PGVECTOR_ARGS := $(call helm_pgvector_args))
 	@$(eval MINIO_ARGS := $(call helm_minio_args))
 	@$(eval LLM_SERVICE_ARGS := $(call helm_llm_service_args))
@@ -134,30 +139,37 @@ uninstall:
 	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|minio)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
 	@echo "Deleting remaining pods in namespace $(NAMESPACE)"
 	@oc delete pods -n $(NAMESPACE) --all
-	@echo "Checking for any remaining resources in namespace $(NAMESPACE)..."
-	@echo "If you want to completely remove the namespace, run: oc delete project $(NAMESPACE)"
+	@echo "\nChecking for any remaining resources in namespace $(NAMESPACE)..."
 	@echo "Remaining resources in namespace $(NAMESPACE):"
 	@$(MAKE) status
+	@echo "\n ** If you want to completely remove the namespace, run: oc delete project $(NAMESPACE) **"
 
 # Install extra ingestion pipelines
 .PHONY: install-ingestion-pipeline
 install-ingestion-pipeline:
 	helm install $(CUSTOM_INGESTION_PIPELINE_NAME) rag/charts/ingestion-pipeline-0.1.0.tgz -f $(CUSTOM_INGESTION_PIPELINE_VALUES)
 
+# Delete all jobs in the namespace
+.PHONY: delete-jobs
+delete-jobs:
+	@echo "Deleting all jobs in namespace $(NAMESPACE)"
+	@oc get jobs -n $(NAMESPACE) -o name | xargs -r oc delete -n $(NAMESPACE) ||:
+	@echo "Job deletion completed"
+
 # Check deployment status
 .PHONY: status
 status:
-	@echo "Listing pods..."
-	oc get pods -n $(NAMESPACE) || true
+	@echo "\n-> Listing pods..."
+	@oc get pods -n $(NAMESPACE) || true
 
-	@echo "Listing services..."
-	oc get svc -n $(NAMESPACE) || true
+	@echo "\n-> Listing services..."
+	@oc get svc -n $(NAMESPACE) || true
 
-	@echo "Listing routes..."
-	oc get routes -n $(NAMESPACE) || true
+	@echo "\n-> Listing routes..."
+	@oc get routes -n $(NAMESPACE) || true
 
-	@echo "Listing secrets..."
-	oc get secrets -n $(NAMESPACE) | grep huggingface-secret || true
+	@echo "\n-> Listing secrets..."
+	@oc get secrets -n $(NAMESPACE) | grep huggingface-secret || true
 
-	@echo "Listing pvcs..."
-	oc get pvc -n $(NAMESPACE) || true
+	@echo "\n-> Listing pvcs..."
+	@oc get pvc -n $(NAMESPACE) || true
