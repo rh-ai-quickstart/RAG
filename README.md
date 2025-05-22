@@ -134,14 +134,8 @@ The output of the command may be something like below
     - effect: NoSchedule
       key: nvidia.com/gpu
       value: "true"
---
-    taints:
-    - effect: NoSchedule
-      key: odh-notebook
-      value: "true"
 ```
-In the output shown above, `nvidia.com/gpu` is the key for two of the taints and is 
-`odh-notebook` for the third taint.
+In the output shown above, `nvidia.com/gpu` is the key for the taints.
 
 
 _You can work with your OpenShift cluster admin team to determine what labels and taints identify GPU-enabled worker nodes.  It is also possible that all your worker nodes have GPUs therefore have no distinguishing taint._
