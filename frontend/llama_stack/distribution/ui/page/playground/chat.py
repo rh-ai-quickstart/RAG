@@ -9,16 +9,11 @@ import json
 import uuid
 
 import streamlit as st
-from llama_stack_client.lib.agents.agent import Agent
-from llama_stack_client.lib.agents.event_logger import  EventLogger
+from llama_stack_client import Agent, AgentEventLogger
 from llama_stack_client.lib.agents.react.agent import ReActAgent
 from llama_stack_client.lib.agents.react.tool_parser import ReActOutput
 from llama_stack.apis.common.content_types import ToolCallDelta
 from llama_stack.distribution.ui.modules.api import llama_stack_api
-from llama_stack_client.types import UserMessage
-from llama_stack_client.types.shared_params import SamplingParams
-from llama_stack_client.types.shared_params.response_format import JsonSchemaResponseFormat
-from llama_stack_client.types.shared_params.sampling_params import StrategyTopPSamplingStrategy
 
 
 class AgentType(enum.Enum):
@@ -33,13 +28,13 @@ def get_strategy(temperature, top_p):
 
 
 def render_history(tool_debug):
-    """Renders the chat history from the session state.
+    """Renders the chat history from session state.
     Also displays debug events for assistant messages if tool_debug is enabled.
     """
-    # Initialize messages in the session state if not present
+    # Initialize messages in session state if not present
     if 'messages' not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "How can I help you?"}]
-    # Initialize debug_events in the session state if not present
+    # Initialize debug_events in session state if not present
     if 'debug_events' not in st.session_state:
          st.session_state.debug_events = []
 
@@ -53,7 +48,7 @@ def render_history(tool_debug):
                 # The index for debug_events corresponds to the assistant message turn.
                 # messages: [A_initial, U_1, A_1, U_2, A_2, ...]
                 # debug_events: [events_for_A_1, events_for_A_2, ...]
-                # For A_1 (msg index 2), the debug_events index is (2//2)-1 = 0.
+                # For A_1 (msg index 2), debug_events index is (2//2)-1 = 0.
                 debug_event_list_index = (i // 2) - 1
                 if 0 <= debug_event_list_index < len(st.session_state.debug_events):
                     current_turn_events_list = st.session_state.debug_events[debug_event_list_index]
@@ -182,19 +177,20 @@ def tool_chat_page():
                     for idx, tool in enumerate(tools, start=1):
                         st.markdown(f"{idx}. `{tool.split(':')[-1]}`")
 
-            st.subheader("Agent Configurations")
-            st.subheader("Agent Type")
-            agent_type = st.radio(
-                label="Select Agent Type",
-                options=["Regular", "ReAct"],
-                on_change=reset_agent,
-            )
+            # st.subheader("Agent Configurations")
+            # st.subheader("Agent Type")
+            # agent_type = st.radio(
+            #     label="Select Agent Type",
+            #     options=["Regular", "ReAct"],
+            #     on_change=reset_agent,
+            # )
 
-            if agent_type == "ReAct":
-                agent_type = AgentType.REACT
-            else:
-                agent_type = AgentType.REGULAR
+            # if agent_type == "ReAct":
+            #     agent_type = AgentType.REACT
+            # else:
+            #     agent_type = AgentType.REGULAR
 
+            agent_type = AgentType.REGULAR
         
         if processing_mode == "Agent-based":
             input_shields = []
@@ -251,15 +247,15 @@ def tool_chat_page():
                 client=client,
                 model=model,
                 tools=updated_toolgroup_selection,
-                response_format=JsonSchemaResponseFormat(
-                    type="json_schema",
-                    json_schema=ReActOutput.model_json_schema()
-                ),
-                sampling_params=SamplingParams(
-                    strategy=StrategyTopPSamplingStrategy(type="top_p", temperature=temperature, top_p=top_p),
-                    max_tokens=max_tokens,
-                    repetition_penalty=repetition_penalty,
-                ),
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": ReActOutput.model_json_schema(),
+                },
+                sampling_params={
+                    "strategy": get_strategy(temperature, top_p),
+                    "max_tokens": max_tokens,
+                    "repetition_penalty": repetition_penalty,
+                },
                 input_shields= input_shields,
                 output_shields= output_shields,
             )
@@ -271,11 +267,11 @@ def tool_chat_page():
                 model=model,
                 instructions=f"{updated_system_prompt} When you use a tool always respond with a summary of the result.",
                 tools=updated_toolgroup_selection,
-                sampling_params=SamplingParams(
-                    strategy=StrategyTopPSamplingStrategy(type="top_p", temperature=temperature, top_p=top_p),
-                    max_tokens=max_tokens,
-                    repetition_penalty=repetition_penalty,
-                ),
+                sampling_params={
+                    "strategy": get_strategy(temperature, top_p),
+                    "max_tokens": max_tokens,
+                    "repetition_penalty": repetition_penalty,
+                },
                 input_shields= input_shields,
                 output_shields= output_shields,
             )
@@ -295,7 +291,7 @@ def tool_chat_page():
     if "debug_events" not in st.session_state: # Per-turn debug logs
         st.session_state["debug_events"] = []
 
-    render_history(tool_debug) # Display the current chat history and any past debug events
+    render_history(tool_debug) # Display current chat history and any past debug events
 
     def response_generator(turn_response, debug_events_list):
         if st.session_state.get("agent_type") == AgentType.REACT:
@@ -476,8 +472,8 @@ def tool_chat_page():
                 debug_events_list.append({"type": "warning", "source": "_handle_regular_response", "details": "Unexpected event structure", "event": str(response)[:200]})
 
         # Process the debug log stream separately
-        # EventLogger helps parse and structure these events
-        for log_entry in EventLogger().log(debug_log_stream):
+        # AgentEventLogger helps parse and structure these events
+        for log_entry in AgentEventLogger().log(debug_log_stream):
             if log_entry.role == "tool_execution": # Or other relevant roles
                 debug_events_list.append({"type": "tool_log", "content": log_entry.content})
             # Add other log types as needed for debugging
@@ -486,7 +482,7 @@ def tool_chat_page():
         # Send the prompt to the agent
         turn_response = agent.create_turn(
             session_id=session_id,
-            messages=[UserMessage(role="user", content=prompt)],
+            messages=[{"role": "user", "content": prompt}],
             stream=True,
         )
         response_content = st.write_stream(response_generator(turn_response, debug_events_list))
@@ -559,7 +555,7 @@ def tool_chat_page():
         #st.session_state.displayed_messages.append(response_dict)
 
     if prompt := st.chat_input(placeholder="Ask a question..."):
-        # Append the user message to history and display it
+        # Append user message to history and display it
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
