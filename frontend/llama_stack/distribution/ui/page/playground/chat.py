@@ -47,6 +47,37 @@ def render_history(tool_debug):
         with st.chat_message(msg['role']):
             st.markdown(msg['content'])
 
+            # Display ReAct steps if this is a ReAct agent message
+            if msg['role'] == 'assistant' and 'react_steps' in msg and msg['react_steps']:
+                for step_idx, step in enumerate(msg['react_steps']):
+                    if isinstance(step, dict):
+                        thought = step.get('thought')
+                        if thought:
+                            with st.expander(f"🤔 Thinking (Step {step_idx + 1})", expanded=False):
+                                st.markdown(f":grey[__{thought}__]")
+                        
+                        action = step.get('action')
+                        if action and isinstance(action, dict):
+                            tool_name = action.get('tool_name', 'Unknown Tool')
+                            tool_params = action.get('tool_params', {})
+                            with st.expander(f'🛠 Action: Using tool "{tool_name}" (Step {step_idx + 1})', expanded=False):
+                                st.json(tool_params)
+                        
+                        observation = step.get('observation')
+                        if observation and isinstance(observation, dict):
+                            tool_name = observation.get('tool_name', 'Unknown Tool')
+                            content = observation.get('content', '')
+                            with st.expander(f'⚙️ Observation (Result from "{tool_name}") (Step {step_idx + 1})', expanded=False):
+                                try:
+                                    parsed_content = json.loads(content)
+                                    st.json(parsed_content)
+                                except json.JSONDecodeError:
+                                    st.code(content, language=None)
+                
+                # Display the final answer after all the steps
+                if 'final_answer' in msg and msg['final_answer']:
+                    st.markdown(msg['final_answer'])
+
             # Display debug events expander for assistant messages (excluding the initial greeting)
             if msg['role'] == 'assistant' and tool_debug and i > 0:
                 # Debug events are stored per assistant turn.
@@ -307,6 +338,7 @@ def tool_chat_page():
         current_step_content = ""
         final_answer = None
         tool_results = []
+        react_steps = []  # Store ReAct steps for persistence
 
         for response in turn_response:
             if not hasattr(response.event, "payload"):
@@ -328,18 +360,35 @@ def tool_chat_page():
                 step_details = payload.step_details
 
                 if step_details.step_type == "inference":
-                    yield from _process_inference_step(current_step_content, tool_results, final_answer)
+                    new_final_answer, step_data = _process_inference_step(current_step_content, tool_results, final_answer)
+                    if step_data:
+                        react_steps.append(step_data)
+                    if new_final_answer:
+                        final_answer = new_final_answer
                     current_step_content = ""
                 elif step_details.step_type == "tool_execution":
-                    tool_results = _process_tool_execution(step_details, tool_results)
+                    tool_results, step_data = _process_tool_execution(step_details, tool_results)
+                    if step_data:
+                        react_steps.append(step_data)
                     current_step_content = ""
                 else:
                     current_step_content = ""
 
         if not final_answer and tool_results:
             yield from _format_tool_results_summary(tool_results)
+        
+        # Store react_steps in session state for this turn
+        if react_steps:
+            if 'current_react_steps' not in st.session_state:
+                st.session_state.current_react_steps = []
+            st.session_state.current_react_steps = react_steps
+
+        # Yield the final answer at the end
+        if final_answer:
+            yield f"\n\n✅ **Final Answer:**\n{final_answer}"
 
     def _process_inference_step(current_step_content, tool_results, final_answer):
+        step_data = {}
         try:
             react_output_data = json.loads(current_step_content)
             thought = react_output_data.get("thought")
@@ -350,32 +399,39 @@ def tool_chat_page():
                 final_answer = answer
 
             if thought:
+                step_data['thought'] = thought
                 with st.expander("🤔 Thinking...", expanded=False):
                     st.markdown(f":grey[__{thought}__]")
 
             if action and isinstance(action, dict):
+                step_data['action'] = action
                 tool_name = action.get("tool_name")
                 tool_params = action.get("tool_params")
                 with st.expander(f'🛠 Action: Using tool "{tool_name}"', expanded=False):
                     st.json(tool_params)
 
-            if answer and answer != "null" and answer is not None:
-                yield f"\n\n✅ **Final Answer:**\n{answer}"
-
         except json.JSONDecodeError:
-            yield f"\n\nFailed to parse ReAct step content:\n```json\n{current_step_content}\n```"
+            st.error(f"\n\nFailed to parse ReAct step content:\n```json\n{current_step_content}\n```")
         except Exception as e:
-            yield f"\n\nFailed to process ReAct step: {e}\n```json\n{current_step_content}\n```"
-
-        return final_answer
+            st.error(f"\n\nFailed to process ReAct step: {e}\n```json\n{current_step_content}\n```")
+        
+        return final_answer, step_data
 
     def _process_tool_execution(step_details, tool_results):
+        step_data = {}
         try:
             if hasattr(step_details, "tool_responses") and step_details.tool_responses:
                 for tool_response in step_details.tool_responses:
                     tool_name = tool_response.tool_name
                     content = tool_response.content
                     tool_results.append((tool_name, content))
+                    
+                    # Store observation data
+                    step_data['observation'] = {
+                        'tool_name': tool_name,
+                        'content': content
+                    }
+                    
                     with st.expander(f'⚙️ Observation (Result from "{tool_name}")', expanded=False):
                         try:
                             parsed_content = json.loads(content)
@@ -389,7 +445,7 @@ def tool_chat_page():
             with st.expander("⚙️ Error in Tool Execution", expanded=False):
                 st.markdown(f":red[_Error processing tool execution: {str(e)}_]")
 
-        return tool_results
+        return tool_results, step_data
 
     def _format_tool_results_summary(tool_results):
         yield "\n\n**Here's what I found:**\n"
@@ -489,8 +545,28 @@ def tool_chat_page():
             messages=[UserMessage(role="user", content=prompt)],
             stream=True,
         )
-        response_content = st.write_stream(response_generator(turn_response, debug_events_list))
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
+        
+        if st.session_state.get("agent_type") == AgentType.REACT:
+            # For ReAct agent, capture the steps and final answer
+            response_content = st.write_stream(response_generator(turn_response, debug_events_list))
+            
+            # Get the stored react steps for this turn
+            react_steps = st.session_state.get('current_react_steps', [])
+            
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": "",
+                "react_steps": react_steps,
+                "final_answer": response_content.strip() if response_content.strip() else None
+            })
+            
+            # Clear the current react steps
+            if 'current_react_steps' in st.session_state:
+                del st.session_state.current_react_steps
+        else:
+            # For regular agent, use the existing approach
+            response_content = st.write_stream(response_generator(turn_response, debug_events_list))
+            st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
     def direct_process_prompt(prompt, debug_events_list):
