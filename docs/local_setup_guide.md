@@ -91,7 +91,7 @@ Verify the container is running:
 podman ps
 ```
 
-Note:  Another option is to connect to a remote Llama Stack Service.  Based on the instructions of this kickstart, you should have one running in cluster and you can use `oc port-forward` to make it available on localhost.
+Note:  Another option is to connect to a remote Llama Stack Service.  Based on the instructions of this quickstart, you should have one running in cluster and you can use `oc port-forward` to make it available on localhost.
 
 ```bash
 oc get services -l app.kubernetes.io/name=llamastack
