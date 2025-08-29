@@ -69,7 +69,7 @@ Enterprise documents are pre-processed and ingested into the system for later qu
 
 ---
 
-The kickstart supports two modes of deployments
+The quickstart supports two modes of deployments
 
 - Local
 - Openshift
