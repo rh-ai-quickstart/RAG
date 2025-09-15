@@ -88,7 +88,7 @@ help:
 	@echo "Configuration options (set via environment variables or make arguments):"
 	@echo "  NAMESPACE                - Target namespace (default: llama-stack-rag)"
 	@echo "  HF_TOKEN                 - Hugging Face Token (will prompt if not provided)"
-	@echo "  DEVICE                	  - Deploy models on cpu or gpu (default)"
+	@echo "  DEVICE                	  - Deploy models on cpu, gpu (default), or hpu (Intel Gaudi)"
 	@echo "  {SAFETY,LLM}             - Model id as defined in values (eg. llama-3-2-1b-instruct)"
 	@echo "  {SAFETY,LLM}_URL         - Model URL"
 	@echo "  {SAFETY,LLM}_API_TOKEN   - Model API token for remote models"

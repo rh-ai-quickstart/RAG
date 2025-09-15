@@ -35,8 +35,13 @@ volumeMounts:
     name: dot-streamlit
 
 # Common model values for llm-service and llama-stack
-# See format in https://github.com/RHEcosystemAppEng/ai-architecture-charts/blob/main/helm/llm-service/values.yaml
+# See format in https://github.com/rh-ai-quickstart/ai-architecture-charts/blob/main/llm-service/helm/values.yaml
 # For e.g., to add a new model add the following block and it will append to the list of models defined in the llm-service
+# 
+# Device Support:
+# - Use DEVICE=cpu for CPU-only deployment
+# - Use DEVICE=gpu for NVIDIA GPU deployment (default)
+# - Use DEVICE=hpu for Intel Gaudi HPU deployment (requires Intel Gaudi drivers and setup)
 
 # global:
 #   models:
@@ -63,27 +68,32 @@ volumeMounts:
 #       - llama3_json
 #       - --max-model-len
 #       - "30444"
+#     # Example HPU (Intel Gaudi) configuration:
+#     llama-3-2-3b-instruct:
+#       id: meta-llama/Llama-3.2-3B-Instruct
+#       enabled: true
+#       device: "hpu"
+#       accelerators: "1" # Can be omitted, defaults to 1
+#       args:
+#       - --max-model-len
+#       - "14336"
+#       - --max-num-seqs
+#       - "32"
 #     llama-guard-3-8b:
 #       id: meta-llama/Llama-Guard-3-8B
 #       enabled: true
 #       registerShield: true
-#       tolerations:
-#       - key: "nvidia.com/gpu"
-#         operator: Exists
-#         effect: NoSchedule      
+#       device: "hpu"    
 #       args:
 #       - --max-model-len
 #       - "14336"
+#       - --max-num-seqs
+#       - "32"
 #     granite-vision-3-2-2b:
 #       id: ibm-granite/granite-vision-3.2-2b
-#       enabled: true      
-#       resources:
-#         limits:
-#           nvidia.com/gpu: "1"
-#       tolerations:
-#       - key: "nvidia.com/gpu"
-#         operator: Exists
-#         effect: NoSchedule
+#       enabled: true
+#       device: "gpu"  # Options: "cpu", "gpu", "hpu"
+#       accelerators: "1"
 #       args:
 #       - --tensor-parallel-size
 #       - "1"
