@@ -1,4 +1,4 @@
-# RAG Reference Architecture using LLaMA Stack, OpenShift AI, and PGVector
+# RAG Reference Architecture using LLaMA Stack, OpenShift AI, and PGVector or EDB
 
 ## Description
 
