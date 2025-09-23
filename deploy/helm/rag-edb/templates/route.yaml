@@ -1,0 +1,18 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: {{ include "rag.fullname" . }}
+  labels:
+    {{- include "rag.labels" . | nindent 4 }}
+spec:
+  to:
+    kind: Service
+    name: {{ include "rag.fullname" . }}
+    weight: 100
+  port:
+    targetPort: {{ .Values.service.port }}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+  alternateBackends: []

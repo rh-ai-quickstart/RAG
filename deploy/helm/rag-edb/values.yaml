@@ -1,0 +1,172 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/ecosystem-appeng/llamastack-dist-ui
+  pullPolicy: IfNotPresent
+  # tag: 0.2.9
+
+service:
+  type: ClusterIP
+  port: 8501
+
+serviceAccount:
+  create: false
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+
+env:
+  - name: LLAMA_STACK_ENDPOINT
+    value: 'http://llamastack:8321'
+
+volumes:
+  - emptyDir: {}
+    name: dot-streamlit
+
+volumeMounts:
+  - mountPath: /.streamlit
+    name: dot-streamlit
+
+# Common model values for llm-service and llama-stack
+# See format in https://github.com/rh-ai-quickstart/ai-architecture-charts/blob/main/llm-service/helm/values.yaml
+# For e.g., to add a new model add the following block and it will append to the list of models defined in the llm-service
+# 
+# Device Support:
+# - Use DEVICE=cpu for CPU-only deployment
+# - Use DEVICE=gpu for NVIDIA GPU deployment (default)
+# - Use DEVICE=hpu for Intel Gaudi HPU deployment (requires Intel Gaudi drivers and setup)
+
+# global:
+#   models:
+#     llama-4-scout-17b:
+#       url: "https://llama-4-scout:443/v1"
+#       apiToken: "Paste-your-token-here"
+#       id: "llama-4-scout-17b"
+#       enabled: true
+#     llama-3-2-3b-instruct:
+#       id: meta-llama/Llama-3.2-3B-Instruct
+#       enabled: true
+#       resources:
+#         limits:
+#           nvidia.com/gpu: "1"
+#       tolerations:
+#       - key: "nvidia.com/gpu"
+#         operator: Exists
+#         effect: NoSchedule
+#       args:
+#       - --enable-auto-tool-choice
+#       - --chat-template
+#       - /vllm-workspace/examples/tool_chat_template_llama3.2_json.jinja
+#       - --tool-call-parser
+#       - llama3_json
+#       - --max-model-len
+#       - "30444"
+#     # Example HPU (Intel Gaudi) configuration:
+#     llama-3-2-3b-instruct:
+#       id: meta-llama/Llama-3.2-3B-Instruct
+#       enabled: true
+#       device: "hpu"
+#       accelerators: "1" # Can be omitted, defaults to 1
+#       args:
+#       - --max-model-len
+#       - "14336"
+#       - --max-num-seqs
+#       - "32"
+#     llama-guard-3-8b:
+#       id: meta-llama/Llama-Guard-3-8B
+#       enabled: true
+#       registerShield: true
+#       device: "hpu"    
+#       args:
+#       - --max-model-len
+#       - "14336"
+#       - --max-num-seqs
+#       - "32"
+#     granite-vision-3-2-2b:
+#       id: ibm-granite/granite-vision-3.2-2b
+#       enabled: true
+#       device: "gpu"  # Options: "cpu", "gpu", "hpu"
+#       accelerators: "1"
+#       args:
+#       - --tensor-parallel-size
+#       - "1"
+#       - --max-model-len
+#       - "6144"
+#       - --enable-auto-tool-choice
+#       - --tool-call-parser
+#       - granite
+#     qwen25-vl-7b-instruct-fp8-dynamic:
+#       id: RedHatAI/Qwen2.5-VL-7B-Instruct-FP8-Dynamic
+#       enabled: true      
+#       resources:
+#         limits:
+#           nvidia.com/gpu: "1"
+#       tolerations:
+#       - key: "nvidia.com/gpu"
+#         operator: Exists
+#         effect: NoSchedule
+#       args:
+#       - --distributed-executor-backend=mp
+#       - --dtype=auto
+#       - --max-model-len=8000
+
+global:
+  models: {}
+  mcp-servers: {}
+
+pgvector:
+  secret:
+    user: postgres
+    password: rag_password
+    dbname: rag_blueprint
+    host: pgvector
+    port: "5432"
+
+minio:
+  secret:
+    user: minio_rag_user
+    password: minio_rag_password
+    host: minio
+    port: "9000"
+  
+    # Upload sample files to the minio bucket 
+  sampleFileUpload:
+    enabled: true
+    bucket: documents
+    urls: 
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_and_the_Town_of_Tumble_Town.pdf
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
+
+
+llama-stack:
+  secrets:
+    TAVILY_SEARCH_API_KEY: "Paste-your-key-here"
+
+
+ingestion-pipeline:
+  defaultPipeline:
+    enabled: true
+    # options are [S3, URL]
+    source: S3
+    # embedding model to use for creating embeddings
+    embedding_model: all-MiniLM-L6-v2
+    # name of the vector db with version, pipeline will be created with pipeline_red_hat_openshift
+    name: "zippity-zoo-vector-db"
+    # version of the knowledgebase
+    version: "1.0"
+
+    S3:
+      access_key_id: minio_rag_user
+      secret_access_key: minio_rag_password
+      bucket_name: documents
+      endpoint_url: http://minio:9000
+      region: us-east-1
+
