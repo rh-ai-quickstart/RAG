@@ -54,7 +54,7 @@ Enterprise documents are pre-processed and ingested into the system for later qu
 | **UI Layer**     | Streamlit / React              | Chat-based user interaction |
 | **Retrieval**    | Retriever                      | Vector search |
 | **Embedding**    | `all-MiniLM-L6-v2`             | Converts text to vectors |
-| **Vector DB**    | PostgreSQL + PGVector          | Stores embeddings |
+| **Vector DB**    | PostgreSQL + PGVector, EDB          | Stores embeddings |
 | **LLM**          | `Llama-3.2-3B-Instruct`        | Generates responses |
 | **Ingestor**     |  Kubeflow Pipeline             | Embeds documents and stores vectors |
 | **Storage**      |  S3 Bucket                     | Document source |
