@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-from llama_stack.distribution.ui.modules.api import llama_stack_api
+from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
 
 """
 Native Evaluation page: select a benchmark, configure eval candidate, and run full generation + scoring.

@@ -1,5 +1,5 @@
 [project]
-name = "llama_stack"
+name = "llama_stack_ui"
 version = "6"
 description = "Local LLM stack with UI for RAG-based applications"
 authors = [
@@ -11,9 +11,15 @@ dependencies = [
     "streamlit",
     "pandas",
     "llama-stack-client==0.2.9",
-    "requests",       
-    "streamlit-option-menu",        
+    "requests",
+    "streamlit-option-menu",
     "llama-stack==0.2.9",
+    "fire",
 ]
 
 [tool.setuptools]
+packages = ["llama_stack_ui"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

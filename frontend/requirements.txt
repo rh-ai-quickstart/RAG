@@ -1,5 +1,0 @@
-streamlit
-pandas
-streamlit-option-menu
-llama-stack-client==__LLAMASTACK_VERSION__
-llama-stack==__LLAMASTACK_VERSION__

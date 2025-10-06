@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+
+  # Ollama server for local LLM inference
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-ollama
+    restart: on-failure:50
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # Give more time for model download
+    networks:
+      - rag-network
+    # Pull the model on startup
+    entrypoint: >
+      sh -c "
+        ollama serve &
+        sleep 10 &&
+        ollama pull llama3.2:1b-instruct-fp16 &&
+        wait
+      "
+
+  # Llama Stack server
+  llamastack:
+    image: llamastack/distribution-ollama:0.2.9
+    platform: linux/amd64
+    container_name: rag-llamastack
+    restart: on-failure:50
+    depends_on:
+      ollama:
+        condition: service_started  # Changed from service_healthy
+      # pgvector:
+      #   condition: service_healthy
+    environment:
+      INFERENCE_MODEL: "llama3.2:1b-instruct-fp16"
+      OLLAMA_URL: "http://ollama:11434"
+      TAVILY_SEARCH_API_KEY: "${TAVILY_SEARCH_API_KEY:-}"  # Set this if you have a Tavily API key
+    ports:
+      - "8321:8321"
+    volumes:
+      - llamastack_data:/root/.llama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8321/"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s  # Give more time for startup
+    networks:
+      - rag-network
+
+  # RAG UI Frontend
+  rag-ui:
+    platform: linux/amd64
+    build:
+      context: ../../frontend
+      dockerfile: Containerfile
+      args:
+        IMAGE_TAG: "0.2.9"
+    container_name: rag-ui
+    depends_on:
+      llamastack:
+        condition: service_started  # Changed from service_healthy
+    environment:
+      LLAMA_STACK_ENDPOINT: "http://llamastack:8321"
+      TAVILY_SEARCH_API_KEY: "${TAVILY_SEARCH_API_KEY:-}"  # Set this if you have a Tavily API key
+    ports:
+      - "8501:8501"
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+
+volumes:
+  ollama_data:
+    driver: local
+  llamastack_data:
+    driver: local
+
+networks:
+  rag-network:
+    driver: bridge

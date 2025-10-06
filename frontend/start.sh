@@ -2,7 +2,5 @@
 
 cd "$(dirname "$0")"
 
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run llama_stack/distribution/ui/app.py
+uv sync && \
+uv run streamlit run llama_stack_ui/distribution/ui/app.py --server.runOnSave true --server.fileWatcherType auto

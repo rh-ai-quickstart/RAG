@@ -10,10 +10,12 @@ COPY . /app/
 # Make sure IMAGE_TAG is set
 RUN if [ -z "$IMAGE_TAG" ]; then echo "IMAGE_TAG is not set"; exit 1; fi
 
-RUN python3 -m pip install --upgrade pip && \
-    sed -i "s/__LLAMASTACK_VERSION__/$IMAGE_TAG/g" requirements.txt && \
-    pip3 install -r requirements.txt
+# Install uv
+RUN pip install uv
+
+# Install dependencies using uv
+RUN uv sync --frozen
 
 EXPOSE 8501
 
-ENTRYPOINT ["streamlit", "run", "/app/llama_stack/distribution/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["uv", "run", "streamlit", "run", "/app/llama_stack_ui/distribution/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
