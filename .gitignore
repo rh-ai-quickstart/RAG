@@ -178,5 +178,4 @@ cython_debug/
 *.pyc
 deploy/helm/namespace
 deploy/helm/secrets
-uv.lock
 .DS_Store
