@@ -1,0 +1,184 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/e2e/requirements.txt
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: rag-e2e
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              extraPortMappings:
+              - containerPort: 30080
+                hostPort: 8501
+                protocol: TCP
+              - containerPort: 30081
+                hostPort: 8321
+                protocol: TCP
+
+      - name: Verify cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl get pods -A
+
+      - name: Add Helm repository
+        run: |
+          helm repo add rag-charts https://rh-ai-quickstart.github.io/ai-architecture-charts
+          helm repo update
+
+      - name: Install RAG application
+        run: |
+          # Create namespace
+          kubectl create namespace rag-e2e || true
+          
+          # Install the chart with e2e values
+          helm install rag deploy/helm/rag \
+            --namespace rag-e2e \
+            --values tests/e2e/values-e2e.yaml \
+            --timeout 20m \
+            --wait \
+            --debug
+
+      - name: Wait for deployments to be ready
+        run: |
+          echo "Waiting for all deployments to be ready..."
+          kubectl wait --for=condition=available --timeout=600s \
+            deployment --all -n rag-e2e || true
+          
+          echo "Current pod status:"
+          kubectl get pods -n rag-e2e
+          
+          echo "Waiting for llamastack pod to be ready..."
+          kubectl wait --for=condition=ready --timeout=600s \
+            pod -l app.kubernetes.io/name=llamastack -n rag-e2e || true
+          
+          echo "Waiting for RAG UI pod to be ready..."
+          kubectl wait --for=condition=ready --timeout=300s \
+            pod -l app.kubernetes.io/name=rag -n rag-e2e || true
+          
+          echo "Final pod status:"
+          kubectl get pods -n rag-e2e
+          
+          echo "Checking pod logs for errors..."
+          for pod in $(kubectl get pods -n rag-e2e -o name); do
+            echo "=== Logs for $pod ==="
+            kubectl logs $pod -n rag-e2e --tail=50 || echo "Could not get logs for $pod"
+          done
+
+      - name: Expose services via NodePort
+        run: |
+          # Expose RAG UI
+          kubectl patch service rag -n rag-e2e -p '{"spec":{"type":"NodePort","ports":[{"port":8501,"nodePort":30080}]}}'
+          
+          # Expose Llama Stack
+          kubectl patch service llamastack -n rag-e2e -p '{"spec":{"type":"NodePort","ports":[{"port":8321,"nodePort":30081}]}}'
+          
+          # Verify services
+          kubectl get services -n rag-e2e
+          
+          # Get the node IP
+          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          echo "Node IP: $NODE_IP"
+          
+          # Test connectivity from outside cluster
+          echo "Testing connectivity to RAG UI..."
+          curl -f http://localhost:8501/_stcore/health || echo "RAG UI health check failed"
+          
+          echo "Testing connectivity to Llama Stack..."
+          curl -f http://localhost:8321/ || echo "Llama Stack health check failed"
+
+      - name: Port forward services (backup method)
+        run: |
+          # Start port forwarding in background
+          kubectl port-forward -n rag-e2e svc/rag 8501:8501 &
+          kubectl port-forward -n rag-e2e svc/llamastack 8321:8321 &
+          
+          # Wait for port forwarding to establish
+          sleep 10
+          
+          # Verify forwarding is working
+          netstat -tlnp | grep -E '8501|8321' || echo "Port forwarding status check"
+
+      - name: Run E2E tests
+        env:
+          LLAMA_STACK_ENDPOINT: http://localhost:8321
+          RAG_UI_ENDPOINT: http://localhost:8501
+          INFERENCE_MODEL: meta-llama/Llama-3.2-3B-Instruct
+        run: |
+          echo "Starting E2E user workflow test..."
+          python tests/e2e/test_user_workflow.py
+
+      - name: Debug - Get pod logs on failure
+        if: failure()
+        run: |
+          echo "=== Deployment status ==="
+          kubectl get deployments -n rag-e2e
+          
+          echo "=== Pod status ==="
+          kubectl get pods -n rag-e2e -o wide
+          
+          echo "=== Service status ==="
+          kubectl get services -n rag-e2e
+          
+          echo "=== Events ==="
+          kubectl get events -n rag-e2e --sort-by='.lastTimestamp'
+          
+          echo "=== RAG UI logs ==="
+          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=100 || echo "No RAG UI logs available"
+          
+          echo "=== Llama Stack logs ==="
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=100 || echo "No Llama Stack logs available"
+          
+          echo "=== PGVector logs ==="
+          kubectl logs -l app.kubernetes.io/name=pgvector -n rag-e2e --tail=100 || echo "No PGVector logs available"
+          
+          echo "=== MinIO logs ==="
+          kubectl logs -l app.kubernetes.io/name=minio -n rag-e2e --tail=100 || echo "No MinIO logs available"
+
+      - name: Debug - Describe pods on failure
+        if: failure()
+        run: |
+          for pod in $(kubectl get pods -n rag-e2e -o name); do
+            echo "=== Describing $pod ==="
+            kubectl describe $pod -n rag-e2e
+          done
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Kill port-forward processes
+          pkill -f "kubectl port-forward" || true
+          
+          # Optional: Keep cluster for debugging on failure
+          # Comment out to keep cluster running
+          # kind delete cluster --name rag-e2e
+
