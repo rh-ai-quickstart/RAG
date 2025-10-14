@@ -8,6 +8,7 @@ import sys
 import time
 import requests
 import argparse
+import traceback
 from openai import OpenAI
 
 # Configuration
@@ -33,7 +34,6 @@ def wait_for_endpoint(url, name, max_retries=MAX_RETRIES, retry_delay=RETRY_DELA
                 time.sleep(retry_delay)
             else:
                 raise Exception(f"{name} not ready after {max_retries} attempts: {str(e)}")
-    return False
 
 
 def test_complete_rag_workflow():
@@ -116,6 +116,7 @@ def test_complete_rag_workflow():
     response_text = completion.choices[0].message.content
     print(f"   Assistant:. {response_text}")
     assert response_text is not None and len(response_text) > 0, "Empty response from model"
+    assert '12' in response_text, f"Expected '12' in response, got: {response_text}"
     print("✅ Multi-turn conversation works\n")
     
     # Step 6: Test with custom system prompt (user changes settings)
@@ -148,7 +149,7 @@ def test_complete_rag_workflow():
             print("✅ Streamlit health check passed\n")
         else:
             print(f"⚠️  Health endpoint returned {health_response.status_code}, but app is functional\n")
-    except:
+    except requests.exceptions.RequestException:
         print("⚠️  Health endpoint not accessible, but app is functional\n")
     
     print("="*80)
@@ -233,7 +234,6 @@ def main():
         sys.exit(130)
     except Exception as e:
         print(f"\n❌ Test execution failed: {str(e)}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

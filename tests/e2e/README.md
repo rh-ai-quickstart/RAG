@@ -18,7 +18,7 @@ The test simulates a real user journey through the application:
 
 ### Prerequisites
 - [kind](https://kind.sigs.k8s.io/) - Kubernetes in Docker
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI  
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI
 - [helm](https://helm.sh/docs/intro/install/) - Package manager
 - Python 3.11+
 
@@ -75,7 +75,7 @@ kind delete cluster --name rag-e2e
 
 The E2E test runs automatically on:
 - Pull requests to `main`
-- Pushes to `main`  
+- Pushes to `main`
 - Manual trigger via workflow dispatch
 
 View workflow: `.github/workflows/e2e-tests.yaml`

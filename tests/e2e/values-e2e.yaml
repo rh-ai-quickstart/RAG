@@ -79,7 +79,7 @@ pgvector:
     password: test_password
     dbname: rag_test_db
     host: pgvector
-    port: "5432"
+    port: 5432
   resources:
     requests:
       memory: "512Mi"
@@ -94,7 +94,7 @@ minio:
     user: minio_test_user
     password: minio_test_password
     host: minio
-    port: "9000"
+    port: 9000
   resources:
     requests:
       memory: "256Mi"
@@ -126,4 +126,3 @@ llama-stack:
 ingestion-pipeline:
   defaultPipeline:
     enabled: false
-
