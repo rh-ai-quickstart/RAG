@@ -114,15 +114,14 @@ kubectl get events -n rag-e2e --sort-by='.lastTimestamp'
 
 ## Adding More Tests
 
-To add additional workflow tests, edit `test_user_workflow.py`:
+To add additional workflow tests, edit the `test_complete_rag_workflow()` function in `test_user_workflow.py`:
 
 ```python
-def test_your_workflow():
-    """Test description"""
-    print("🧪 Testing your feature...")
-    # Your test code
-    assert condition, "Error message"
-    print("✅ Test passed\n")
+# Add your test step
+print("🧪 Step X: Testing your feature...")
+# Your test code
+assert condition, "Error message"
+print("✅ Test passed\n")
 ```
 
 ## CI Expectations
