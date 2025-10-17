@@ -216,43 +216,117 @@ jobs:
 
       - name: Wait for core services to be ready
         run: |
-          echo "Listing all resources..."
+          echo "========================================="
+          echo "Listing all resources in namespace..."
+          echo "========================================="
           kubectl get all -n rag-e2e
           
           echo ""
-          echo "Waiting for Llama Stack deployment..."
+          echo "========================================="
+          echo "Checking deployments..."
+          echo "========================================="
+          kubectl get deployments -n rag-e2e -o wide
+          
+          echo ""
+          echo "========================================="
+          echo "Checking pods..."
+          echo "========================================="
+          kubectl get pods -n rag-e2e -o wide
+          
+          echo ""
+          echo "========================================="
+          echo "Describing llamastack deployment..."
+          echo "========================================="
+          kubectl describe deployment llamastack -n rag-e2e || echo "Llamastack deployment not found"
+          
+          echo ""
+          echo "========================================="
+          echo "Checking events for issues..."
+          echo "========================================="
+          kubectl get events -n rag-e2e --sort-by='.lastTimestamp' | tail -20
+          
+          echo ""
+          echo "========================================="
+          echo "Waiting for Llama Stack deployment (10min timeout)..."
+          echo "========================================="
           kubectl wait --for=condition=available --timeout=600s \
-            deployment/llamastack -n rag-e2e || true
+            deployment/llamastack -n rag-e2e || {
+            echo "❌ Llama Stack deployment failed to become available"
+            echo "Pod status:"
+            kubectl get pods -l app.kubernetes.io/name=llamastack -n rag-e2e
+            echo "Pod describe:"
+            kubectl describe pods -l app.kubernetes.io/name=llamastack -n rag-e2e
+            echo "Recent events:"
+            kubectl get events -n rag-e2e --sort-by='.lastTimestamp' | tail -30
+            exit 1
+          }
           
-          echo "Waiting for RAG UI deployment..."
+          echo ""
+          echo "========================================="
+          echo "Waiting for RAG UI deployment (5min timeout)..."
+          echo "========================================="
           kubectl wait --for=condition=available --timeout=300s \
-            deployment/rag -n rag-e2e || true
+            deployment/rag -n rag-e2e || {
+            echo "❌ RAG UI deployment failed to become available"
+            echo "Pod status:"
+            kubectl get pods -l app.kubernetes.io/name=rag -n rag-e2e
+            echo "Pod describe:"
+            kubectl describe pods -l app.kubernetes.io/name=rag -n rag-e2e
+            echo "Recent events:"
+            kubectl get events -n rag-e2e --sort-by='.lastTimestamp' | tail -30
+            exit 1
+          }
           
           echo ""
+          echo "========================================="
+          echo "✅ Deployments are available"
           echo "Current pod status:"
-          kubectl get pods -n rag-e2e
+          echo "========================================="
+          kubectl get pods -n rag-e2e -o wide
           
           echo ""
-          echo "Waiting for llamastack pod to be ready..."
+          echo "========================================="
+          echo "Waiting for llamastack pod to be ready (10min timeout)..."
+          echo "========================================="
           kubectl wait --for=condition=ready --timeout=600s \
-            pod -l app.kubernetes.io/name=llamastack -n rag-e2e
+            pod -l app.kubernetes.io/name=llamastack -n rag-e2e || {
+            echo "❌ Llamastack pod failed to become ready"
+            kubectl get pods -l app.kubernetes.io/name=llamastack -n rag-e2e -o wide
+            kubectl describe pods -l app.kubernetes.io/name=llamastack -n rag-e2e
+            kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=100 || echo "No logs available"
+            exit 1
+          }
           
-          echo "Waiting for RAG UI pod to be ready..."
+          echo ""
+          echo "========================================="
+          echo "Waiting for RAG UI pod to be ready (5min timeout)..."
+          echo "========================================="
           kubectl wait --for=condition=ready --timeout=300s \
-            pod -l app.kubernetes.io/name=rag -n rag-e2e
+            pod -l app.kubernetes.io/name=rag -n rag-e2e || {
+            echo "❌ RAG UI pod failed to become ready"
+            kubectl get pods -l app.kubernetes.io/name=rag -n rag-e2e -o wide
+            kubectl describe pods -l app.kubernetes.io/name=rag -n rag-e2e
+            kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=100 || echo "No logs available"
+            exit 1
+          }
           
           echo ""
-          echo "Final pod status:"
-          kubectl get pods -n rag-e2e
+          echo "========================================="
+          echo "✅ ALL CORE SERVICES ARE READY!"
+          echo "========================================="
+          kubectl get pods -n rag-e2e -o wide
           
           echo ""
-          echo "Checking core service logs..."
+          echo "========================================="
+          echo "Core service logs (last 50 lines)..."
+          echo "========================================="
+          echo ""
           echo "=== Llama Stack logs ==="
-          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=30 || echo "Could not get logs"
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=50 || echo "Could not get logs"
           
           echo ""
           echo "=== RAG UI logs ==="
-          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=30 || echo "Could not get logs"
+          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=50 || echo "Could not get logs"
 
       - name: Expose services via NodePort
         run: |
