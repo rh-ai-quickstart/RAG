@@ -121,9 +121,10 @@ configure-pipeline:
 mcp-servers:
   enabled: false
 
-# Data ingestion pipeline - disabled for basic e2e tests
+# Data ingestion pipeline - MUST be fully disabled to prevent pod creation
 ingestion-pipeline:
   enabled: false
+  replicaCount: 0
   defaultPipeline:
     enabled: false
 
