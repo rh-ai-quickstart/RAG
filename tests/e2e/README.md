@@ -1,6 +1,6 @@
 # E2E Tests for RAG Application
 
-End-to-end test that validates the complete RAG user workflow in a kind cluster.
+End-to-end test that validates the complete RAG user workflow in a Kubernetes cluster with OpenShift/MicroShift compatibility (using Kind with OpenShift CRDs).
 
 ## What It Tests
 
@@ -17,10 +17,12 @@ The test simulates a real user journey through the application:
 ## Running Locally
 
 ### Prerequisites
-- [kind](https://kind.sigs.k8s.io/) - Kubernetes in Docker
+- [kind](https://kind.sigs.k8s.io/) - Kubernetes in Docker (or MicroShift for production-like testing)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) - Kubernetes CLI  
 - [helm](https://helm.sh/docs/intro/install/) - Package manager
 - Python 3.11+
+
+**Note**: The tests are designed for OpenShift/MicroShift compatibility. When using Kind, OpenShift CRDs (like Route) are installed automatically to simulate the MicroShift environment.
 
 ### Quick Start
 
@@ -28,7 +30,7 @@ The test simulates a real user journey through the application:
 # 1. Install Python dependencies
 pip install -r tests/e2e/requirements.txt
 
-# 2. Create kind cluster with port mappings
+# 2. Create Kind cluster with port mappings and install OpenShift CRDs
 kind create cluster --name rag-e2e --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -41,7 +43,38 @@ nodes:
     hostPort: 8321
 EOF
 
-# 3. Install RAG application
+# Install OpenShift Route CRD for compatibility
+kubectl apply -f https://raw.githubusercontent.com/openshift/router/master/deploy/route_crd.yaml || \
+kubectl apply -f - <<CRDEOF
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: routes.route.openshift.io
+spec:
+  group: route.openshift.io
+  names:
+    kind: Route
+    listKind: RouteList
+    plural: routes
+    singular: route
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+CRDEOF
+
+# 3. Install RAG application  
 helm repo add rag-charts https://rh-ai-quickstart.github.io/ai-architecture-charts
 helm repo update
 
@@ -126,7 +159,8 @@ print("✅ Test passed\n")
 
 ## CI Expectations
 
-- **Startup time**: ~5-10 minutes
+- **Startup time**: ~5-10 minutes (includes CRD installation)
 - **Test execution**: ~1-2 minutes
-- **Total runtime**: ~15-20 minutes
+- **Total runtime**: ~15-20 minutes  
 - **Resources needed**: 4 CPU cores, 16GB RAM
+- **Environment**: Kind cluster with OpenShift CRDs for MicroShift compatibility

@@ -1,4 +1,5 @@
-# E2E test values for kind cluster deployment
+# E2E test values for OpenShift/MicroShift compatible deployment
+# Tested on Kind with OpenShift CRDs
 # Optimized for minimal resources and fast startup
 
 replicaCount: 1
