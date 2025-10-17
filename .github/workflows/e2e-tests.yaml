@@ -27,22 +27,27 @@ jobs:
         run: |
           pip install -r tests/e2e/requirements.txt
 
+      - name: Create Kind cluster config file
+        run: |
+          cat <<EOF > kind-config.yaml
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+          - role: control-plane
+            extraPortMappings:
+            - containerPort: 30080
+              hostPort: 8501
+              protocol: TCP
+            - containerPort: 30081
+              hostPort: 8321
+              protocol: TCP
+          EOF
+
       - name: Create Kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: rag-e2e
-          config: |
-            kind: Cluster
-            apiVersion: kind.x-k8s.io/v1alpha4
-            nodes:
-            - role: control-plane
-              extraPortMappings:
-              - containerPort: 30080
-                hostPort: 8501
-                protocol: TCP
-              - containerPort: 30081
-                hostPort: 8321
-                protocol: TCP
+          config: kind-config.yaml
 
       - name: Install OpenShift Route CRD
         run: |
