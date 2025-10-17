@@ -205,40 +205,54 @@ jobs:
           kubectl create namespace rag-e2e || true
           
           # Install the chart with e2e values
-          # --skip-crds: Skip CRD validation for ingestion-pipeline components (not needed for basic e2e tests)
+          # Note: Not using --wait because disabled subcharts (configure-pipeline) may create
+          # PVCs that never bind. We'll wait for specific deployments in the next step.
           helm install rag deploy/helm/rag \
             --namespace rag-e2e \
             --values tests/e2e/values-e2e.yaml \
             --skip-crds \
             --timeout 20m \
-            --wait \
             --debug
 
-      - name: Wait for deployments to be ready
+      - name: Wait for core services to be ready
         run: |
-          echo "Waiting for all deployments to be ready..."
-          kubectl wait --for=condition=available --timeout=600s \
-            deployment --all -n rag-e2e || true
+          echo "Listing all resources..."
+          kubectl get all -n rag-e2e
           
+          echo ""
+          echo "Waiting for Llama Stack deployment..."
+          kubectl wait --for=condition=available --timeout=600s \
+            deployment/llamastack -n rag-e2e || true
+          
+          echo "Waiting for RAG UI deployment..."
+          kubectl wait --for=condition=available --timeout=300s \
+            deployment/rag -n rag-e2e || true
+          
+          echo ""
           echo "Current pod status:"
           kubectl get pods -n rag-e2e
           
+          echo ""
           echo "Waiting for llamastack pod to be ready..."
           kubectl wait --for=condition=ready --timeout=600s \
-            pod -l app.kubernetes.io/name=llamastack -n rag-e2e || true
+            pod -l app.kubernetes.io/name=llamastack -n rag-e2e
           
           echo "Waiting for RAG UI pod to be ready..."
           kubectl wait --for=condition=ready --timeout=300s \
-            pod -l app.kubernetes.io/name=rag -n rag-e2e || true
+            pod -l app.kubernetes.io/name=rag -n rag-e2e
           
+          echo ""
           echo "Final pod status:"
           kubectl get pods -n rag-e2e
           
-          echo "Checking pod logs for errors..."
-          for pod in $(kubectl get pods -n rag-e2e -o name); do
-            echo "=== Logs for $pod ==="
-            kubectl logs $pod -n rag-e2e --tail=50 || echo "Could not get logs for $pod"
-          done
+          echo ""
+          echo "Checking core service logs..."
+          echo "=== Llama Stack logs ==="
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=30 || echo "Could not get logs"
+          
+          echo ""
+          echo "=== RAG UI logs ==="
+          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=30 || echo "Could not get logs"
 
       - name: Expose services via NodePort
         run: |
