@@ -129,6 +129,11 @@ llm-service:
 
 configure-pipeline:
   enabled: false
+  # Explicitly disable PVC creation
+  persistence:
+    enabled: false
+  pvc:
+    create: false
 
 # Data ingestion pipeline - disabled for basic e2e tests
 ingestion-pipeline:
