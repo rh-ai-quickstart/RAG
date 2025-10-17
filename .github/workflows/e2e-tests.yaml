@@ -27,7 +27,7 @@ jobs:
         run: |
           pip install -r tests/e2e/requirements.txt
 
-      - name: Create kind cluster
+      - name: Create Kind cluster
         uses: helm/kind-action@v1
         with:
           cluster_name: rag-e2e
@@ -44,11 +44,50 @@ jobs:
                 hostPort: 8321
                 protocol: TCP
 
+      - name: Install OpenShift Route CRD
+        run: |
+          echo "Installing OpenShift Route CRD for compatibility..."
+          kubectl apply -f https://raw.githubusercontent.com/openshift/router/master/deploy/route_crd.yaml || true
+          
+          # Fallback: Create basic Route CRD if the above fails
+          cat <<EOF | kubectl apply -f -
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: routes.route.openshift.io
+          spec:
+            group: route.openshift.io
+            names:
+              kind: Route
+              listKind: RouteList
+              plural: routes
+              singular: route
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  properties:
+                    spec:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    status:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          echo "Waiting for CRD to be established..."
+          kubectl wait --for condition=established --timeout=60s crd/routes.route.openshift.io
+
       - name: Verify cluster
         run: |
           kubectl cluster-info
           kubectl get nodes
           kubectl get pods -A
+          kubectl get crds | grep route || echo "Route CRD check"
 
       - name: Add Helm repository
         run: |
