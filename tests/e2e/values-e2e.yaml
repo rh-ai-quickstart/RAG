@@ -1,0 +1,130 @@
+# E2E test values for OpenShift/MicroShift compatible deployment
+# Tested on Kind with OpenShift CRDs
+# Optimized for minimal resources and fast startup
+
+replicaCount: 1
+
+image:
+  repository: quay.io/ecosystem-appeng/llamastack-dist-ui
+  pullPolicy: IfNotPresent
+  tag: "0.2.14"
+
+service:
+  type: ClusterIP
+  port: 8501
+
+serviceAccount:
+  create: false
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+env:
+  - name: LLAMA_STACK_ENDPOINT
+    value: 'http://llamastack:8321'
+
+volumes:
+  - emptyDir: {}
+    name: dot-streamlit
+
+volumeMounts:
+  - mountPath: /.streamlit
+    name: dot-streamlit
+
+# For basic e2e tests, we don't configure models via llm-service
+# This avoids the need for KServe CRDs and model serving infrastructure
+# The tests will verify UI and backend connectivity without full model inference
+global:
+  models: {}
+  mcp-servers: {}
+
+# PostgreSQL + PGVector configuration
+pgvector:
+  secret:
+    user: postgres
+    password: test_password
+    dbname: rag_test_db
+    host: pgvector
+    port: "5432"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+
+# MinIO configuration
+minio:
+  secret:
+    user: minio_test_user
+    password: minio_test_password
+    host: minio
+    port: "9000"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Upload sample files for testing - disabled for basic e2e (causes ImagePullBackOff in CI)
+  sampleFileUpload:
+    enabled: false
+    bucket: documents
+    urls: 
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
+
+# Llama Stack configuration
+llama-stack:
+  secrets:
+    TAVILY_SEARCH_API_KEY: ""
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+  # Skip waiting for model services since we're not using llm-service
+  initContainers: []
+
+# Disable components that require OpenShift/KServe CRDs for basic e2e tests
+llm-service:
+  enabled: false
+
+configure-pipeline:
+  enabled: false
+  # Explicitly disable PVC creation
+  persistence:
+    enabled: false
+  pvc:
+    create: false
+
+# MCP servers
+mcp-servers:
+  enabled: false
+
+# Data ingestion pipeline - MUST be fully disabled to prevent pod creation
+ingestion-pipeline:
+  enabled: false
+  replicaCount: 0
+  defaultPipeline:
+    enabled: false
+
