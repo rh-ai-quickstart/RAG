@@ -104,9 +104,9 @@ minio:
       memory: "512Mi"
       cpu: "500m"
   
-  # Upload sample files for testing
+  # Upload sample files for testing - disabled for basic e2e (causes ImagePullBackOff in CI)
   sampleFileUpload:
-    enabled: true
+    enabled: false
     bucket: documents
     urls: 
     - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
@@ -135,8 +135,13 @@ configure-pipeline:
   pvc:
     create: false
 
+# MCP servers
+mcp-servers:
+  enabled: false
+
 # Data ingestion pipeline - disabled for basic e2e tests
 ingestion-pipeline:
+  enabled: false
   defaultPipeline:
     enabled: false
 
