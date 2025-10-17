@@ -123,6 +123,13 @@ llama-stack:
       memory: "1Gi"
       cpu: "1"
 
+# Disable components that require OpenShift/KServe CRDs for basic e2e tests
+llm-service:
+  enabled: false
+
+configure-pipeline:
+  enabled: false
+
 # Data ingestion pipeline - disabled for basic e2e tests
 ingestion-pipeline:
   defaultPipeline:
