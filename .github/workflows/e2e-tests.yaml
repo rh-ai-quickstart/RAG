@@ -110,9 +110,11 @@ jobs:
           kubectl create namespace rag-e2e || true
           
           # Install the chart with e2e values
+          # --skip-crds: Skip CRD validation for ingestion-pipeline components (not needed for basic e2e tests)
           helm install rag deploy/helm/rag \
             --namespace rag-e2e \
             --values tests/e2e/values-e2e.yaml \
+            --skip-crds \
             --timeout 20m \
             --wait \
             --debug
