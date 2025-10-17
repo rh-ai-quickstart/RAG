@@ -136,7 +136,7 @@ def main():
     print(f"📍 Configuration:")
     print(f"   - Llama Stack: {LLAMA_STACK_ENDPOINT}")
     print(f"   - RAG UI: {RAG_UI_ENDPOINT}")
-    print(f"   - Model: {INFERENCE_MODEL}")
+    print(f"   - Skip Model Tests: {SKIP_MODEL_TESTS}")
     
     try:
         test_complete_rag_workflow()
