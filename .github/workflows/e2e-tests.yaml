@@ -99,6 +99,11 @@ jobs:
           helm repo add rag-charts https://rh-ai-quickstart.github.io/ai-architecture-charts
           helm repo update
 
+      - name: Build Helm dependencies
+        run: |
+          cd deploy/helm/rag
+          helm dependency build
+
       - name: Install RAG application
         run: |
           # Create namespace
