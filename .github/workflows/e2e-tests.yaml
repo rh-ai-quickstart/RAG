@@ -49,13 +49,12 @@ jobs:
           cluster_name: rag-e2e
           config: kind-config.yaml
 
-      - name: Install OpenShift Route CRD
+      - name: Install Required CRDs
         run: |
-          echo "Installing OpenShift Route CRD for compatibility..."
-          kubectl apply -f https://raw.githubusercontent.com/openshift/router/master/deploy/route_crd.yaml || true
+          echo "Installing CRDs required by helm chart subcomponents..."
           
-          # Fallback: Create basic Route CRD if the above fails
-          cat <<EOF | kubectl apply -f -
+          # OpenShift Route CRD
+          kubectl apply -f - <<EOF
           apiVersion: apiextensions.k8s.io/v1
           kind: CustomResourceDefinition
           metadata:
@@ -75,17 +74,113 @@ jobs:
               schema:
                 openAPIV3Schema:
                   type: object
-                  properties:
-                    spec:
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                    status:
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
+                  x-kubernetes-preserve-unknown-fields: true
           EOF
           
-          echo "Waiting for CRD to be established..."
+          # KServe InferenceService CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: inferenceservices.serving.kserve.io
+          spec:
+            group: serving.kserve.io
+            names:
+              kind: InferenceService
+              listKind: InferenceServiceList
+              plural: inferenceservices
+              singular: inferenceservice
+            scope: Namespaced
+            versions:
+            - name: v1beta1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # KServe ServingRuntime CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: servingruntimes.serving.kserve.io
+          spec:
+            group: serving.kserve.io
+            names:
+              kind: ServingRuntime
+              listKind: ServingRuntimeList
+              plural: servingruntimes
+              singular: servingruntime
+            scope: Namespaced
+            versions:
+            - name: v1alpha1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # OpenDataHub DataSciencePipelinesApplication CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io
+          spec:
+            group: datasciencepipelinesapplications.opendatahub.io
+            names:
+              kind: DataSciencePipelinesApplication
+              listKind: DataSciencePipelinesApplicationList
+              plural: datasciencepipelinesapplications
+              singular: datasciencepipelinesapplication
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # Kubeflow Notebook CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: notebooks.kubeflow.org
+          spec:
+            group: kubeflow.org
+            names:
+              kind: Notebook
+              listKind: NotebookList
+              plural: notebooks
+              singular: notebook
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          echo "Waiting for all CRDs to be established..."
           kubectl wait --for condition=established --timeout=60s crd/routes.route.openshift.io
+          kubectl wait --for condition=established --timeout=60s crd/inferenceservices.serving.kserve.io
+          kubectl wait --for condition=established --timeout=60s crd/servingruntimes.serving.kserve.io
+          kubectl wait --for condition=established --timeout=60s crd/datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io
+          kubectl wait --for condition=established --timeout=60s crd/notebooks.kubeflow.org
+          
+          echo "✅ All required CRDs installed successfully"
 
       - name: Verify cluster
         run: |
