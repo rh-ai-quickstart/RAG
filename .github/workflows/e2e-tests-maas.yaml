@@ -339,8 +339,11 @@ jobs:
           echo "=== RAG UI logs ==="
           kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=200 || echo "No RAG UI logs available"
           
-          echo "=== Llama Stack logs ==="
-          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=200 || echo "No Llama Stack logs available"
+          echo "=== Llama Stack logs (CRITICAL - Check model registration) ==="
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=300 || echo "No Llama Stack logs available"
+          
+          echo "=== Llama Stack pod details ==="
+          kubectl describe pod -l app.kubernetes.io/name=llamastack -n rag-e2e || echo "No pod details"
           
           echo "=== PGVector logs ==="
           kubectl logs -l app.kubernetes.io/name=pgvector -n rag-e2e --tail=100 || echo "No PGVector logs available"
