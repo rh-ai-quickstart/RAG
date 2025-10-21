@@ -233,9 +233,16 @@ def test_complete_rag_workflow():
             base_url=LLAMA_STACK_ENDPOINT,
             timeout=30.0
         )
+        
+        print(f"   DEBUG: Calling {LLAMA_STACK_ENDPOINT}/models endpoint...")
         models = client.models.list()
+        print(f"   DEBUG: Raw response type: {type(models)}")
+        print(f"   DEBUG: Number of models in response: {len(models.data)}")
+        
         # Note: llama-stack models use 'identifier' not 'id'
         model_ids = [getattr(model, 'identifier', getattr(model, 'id', None)) for model in models.data]
+        print(f"   DEBUG: Extracted model IDs: {model_ids}")
+        
         model_count = len([m for m in model_ids if m])  # Count non-None models
         
         if model_count > 0:
@@ -246,12 +253,17 @@ def test_complete_rag_workflow():
             else:
                 print(f"   ⚠️  Target model '{INFERENCE_MODEL}' not found, but {model_count} other(s) available")
         else:
-            print(f"   No models configured (expected for basic connectivity tests)")
+            print(f"   ⚠️  No models returned from llama-stack")
+            print(f"   This suggests llama-stack didn't load the model configuration")
         
         print("✅ OpenAI-compatible API works\n")
     except Exception as e:
-        print(f"   Note: Model API check failed: {e}")
-        print("✅ API endpoint is accessible\n")
+        print(f"   ❌ Model API check failed: {e}")
+        print(f"   DEBUG: Exception type: {type(e).__name__}")
+        if hasattr(e, 'response'):
+            print(f"   DEBUG: Response status: {e.response.status_code if hasattr(e.response, 'status_code') else 'N/A'}")
+            print(f"   DEBUG: Response body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
+        print("   Suggestion: Check llama-stack pod logs for model registration errors\n")
     
     # Auto-detect: skip if explicitly set to true, or if auto and no model available
     if SKIP_MODEL_TESTS == "true" or (SKIP_MODEL_TESTS == "auto" and not model_available):
