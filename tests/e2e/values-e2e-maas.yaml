@@ -54,8 +54,7 @@ global:
       url: "https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
       id: "llama-3-2-3b"
       enabled: true
-      # This tells llama-stack to use this as an external OpenAI-compatible endpoint
-      apiToken: ""  # Will be set via --set llama-stack.secrets.OPENAI_API_KEY
+      # apiToken will be set via --set during helm install
 
 # PostgreSQL + PGVector configuration
 pgvector:
@@ -98,15 +97,7 @@ minio:
 # Llama Stack configuration for MaaS
 llama-stack:
   secrets:
-    # API key will be injected from GitHub secret via helm --set
-    OPENAI_API_KEY: ""
     TAVILY_SEARCH_API_KEY: ""
-  
-  # Environment variables for MaaS configuration
-  env:
-    # Configure llama-stack to use OpenAI-compatible provider
-    - name: OPENAI_API_KEY
-      value: ""  # Will be set from secrets
   
   resources:
     requests:

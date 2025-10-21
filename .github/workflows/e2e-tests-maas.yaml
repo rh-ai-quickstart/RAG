@@ -216,16 +216,11 @@ jobs:
           kubectl create namespace rag-e2e || true
           
           # Install the chart with MaaS-enabled e2e values
-          # Note: API key is passed via --set to avoid logging it
+          # Note: API key is passed via --set to the model's apiToken to avoid logging it
           helm install rag deploy/helm/rag \
             --namespace rag-e2e \
             --values tests/e2e/values-e2e-maas.yaml \
-            --set llama-stack.secrets.OPENAI_API_KEY="${MAAS_API_KEY}" \
-            --set-string llama-stack.env[0].name=OPENAI_API_KEY \
-            --set-string llama-stack.env[0].valueFrom.secretKeyRef.name=llamastack-secrets \
-            --set-string llama-stack.env[0].valueFrom.secretKeyRef.key=OPENAI_API_KEY \
-            --set-string llama-stack.env[1].name=OPENAI_BASE_URL \
-            --set-string llama-stack.env[1].value="${MAAS_ENDPOINT}" \
+            --set global.models.llama-3-2-3b.apiToken="${MAAS_API_KEY}" \
             --skip-crds \
             --timeout 20m \
             --debug
