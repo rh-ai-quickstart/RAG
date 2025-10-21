@@ -288,7 +288,25 @@ def test_complete_rag_workflow():
         rag_passed = test_rag_query_with_vector_db(client, INFERENCE_MODEL, skip_inference)
     
     print("="*80)
-    print("✅ E2E TEST COMPLETED!")
+    
+    # Determine if test should pass or fail
+    test_passed = True
+    failure_reasons = []
+    
+    # If SKIP_MODEL_TESTS is explicitly false, inference MUST work
+    if SKIP_MODEL_TESTS == "false":
+        if not model_available:
+            test_passed = False
+            failure_reasons.append("SKIP_MODEL_TESTS=false but no models available")
+        elif not chat_passed:
+            test_passed = False
+            failure_reasons.append("Chat completion test failed")
+    
+    if test_passed:
+        print("✅ E2E TEST COMPLETED!")
+    else:
+        print("❌ E2E TEST FAILED!")
+    
     print("="*80 + "\n")
     print("Summary:")
     print("  ✓ RAG UI is accessible and healthy")
@@ -302,7 +320,7 @@ def test_complete_rag_workflow():
         if chat_passed:
             print("  ✓ Chat completion test passed")
         else:
-            print("  ⚠️  Chat completion test failed or skipped")
+            print("  ❌ Chat completion test failed or skipped")
         
         if rag_passed:
             print("  ✓ RAG query test passed")
@@ -310,9 +328,20 @@ def test_complete_rag_workflow():
             print("  ⚠️  RAG query test skipped (needs vector DB)")
     
     print()
+    
+    if failure_reasons:
+        print("Failures:")
+        for reason in failure_reasons:
+            print(f"  ❌ {reason}")
+        print()
+    
     if not model_available:
-        print("Note: No models were configured for this test.")
-        print("      For full inference testing, use values-e2e-maas.yaml with MaaS.")
+        if SKIP_MODEL_TESTS == "false":
+            print("ERROR: Model inference was required but models are not available!")
+            print("       Check llama-stack configuration and model registration.")
+        else:
+            print("Note: No models were configured for this test.")
+            print("      For full inference testing, use values-e2e-maas.yaml with MaaS.")
     else:
         print(f"Note: Tests used model '{INFERENCE_MODEL}' via MaaS")
         print("      Inference tests validate core RAG functionality.")
@@ -328,6 +357,10 @@ def test_complete_rag_workflow():
         print("  ✓ Multi-message context handling")
         print("  ✓ Token usage tracking")
     print()
+    
+    # Exit with appropriate code
+    if not test_passed:
+        raise AssertionError(f"E2E test failed: {', '.join(failure_reasons)}")
 
 
 def main():
