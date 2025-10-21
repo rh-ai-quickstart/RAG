@@ -230,7 +230,7 @@ def test_complete_rag_workflow():
     try:
         client = OpenAI(
             api_key="not_needed",
-            base_url=f"{LLAMA_STACK_ENDPOINT}/v1",
+            base_url=LLAMA_STACK_ENDPOINT,
             timeout=30.0
         )
         models = client.models.list()
