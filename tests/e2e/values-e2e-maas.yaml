@@ -87,12 +87,11 @@ minio:
       memory: "512Mi"
       cpu: "500m"
   
-  # Upload sample files for RAG testing
+  # Upload sample files - Disabled (requires OpenShift tools image)
   sampleFileUpload:
-    enabled: true
+    enabled: false
     bucket: documents
-    urls: 
-    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
+    urls: []
 
 # Llama Stack configuration for MaaS
 llama-stack:
@@ -107,8 +106,9 @@ llama-stack:
       memory: "1Gi"
       cpu: "1"
   
-  # No init containers needed since we're using external MaaS
+  # Skip waiting for models since we're using external MaaS
   initContainers: []
+  waitForModels: false
 
 # Disable components that require OpenShift/KServe CRDs
 llm-service:
@@ -125,20 +125,12 @@ configure-pipeline:
 mcp-servers:
   enabled: false
 
-# Data ingestion pipeline - Enable for upload/RAG testing
+# Data ingestion pipeline - Disabled for Kind (requires OpenShift internal registry)
+# The ingestion pipeline uses OpenShift-specific images that aren't available in Kind
+# For full RAG testing, this would need to be enabled in an OpenShift environment
 ingestion-pipeline:
-  enabled: true
-  replicaCount: 1
+  enabled: false
+  replicaCount: 0
   defaultPipeline:
-    enabled: true
-    source: S3
-    embedding_model: all-MiniLM-L6-v2
-    name: "test-vector-db"
-    version: "1.0"
-    S3:
-      access_key_id: minio_test_user
-      secret_access_key: minio_test_password
-      bucket_name: documents
-      endpoint_url: http://minio:9000
-      region: us-east-1
+    enabled: false
 
