@@ -234,8 +234,9 @@ def test_complete_rag_workflow():
             timeout=30.0
         )
         models = client.models.list()
-        model_ids = [model.id for model in models.data]
-        model_count = len(model_ids)
+        # Note: llama-stack models use 'identifier' not 'id'
+        model_ids = [getattr(model, 'identifier', getattr(model, 'id', None)) for model in models.data]
+        model_count = len([m for m in model_ids if m])  # Count non-None models
         
         if model_count > 0:
             print(f"   Found {model_count} model(s): {model_ids}")
