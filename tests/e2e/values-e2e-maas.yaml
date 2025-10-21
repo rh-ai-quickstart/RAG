@@ -1,0 +1,153 @@
+# E2E test values with MaaS (Model-as-a-Service) integration
+# This extends values-e2e.yaml with MaaS inference capability
+# Enables full e2e testing including chat completions and RAG queries
+
+replicaCount: 1
+
+image:
+  repository: quay.io/ecosystem-appeng/llamastack-dist-ui
+  pullPolicy: IfNotPresent
+  tag: "0.2.14"
+
+service:
+  type: ClusterIP
+  port: 8501
+
+serviceAccount:
+  create: false
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+env:
+  - name: LLAMA_STACK_ENDPOINT
+    value: 'http://llamastack:8321'
+
+volumes:
+  - emptyDir: {}
+    name: dot-streamlit
+
+volumeMounts:
+  - mountPath: /.streamlit
+    name: dot-streamlit
+
+# Configure models to use Red Hat MaaS
+# The API key will be injected via helm --set in GitHub Actions
+global:
+  models:
+    llama-3-2-3b:
+      url: "https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
+      id: "llama-3-2-3b"
+      enabled: true
+      # This tells llama-stack to use this as an external OpenAI-compatible endpoint
+      apiToken: ""  # Will be set via --set llama-stack.secrets.OPENAI_API_KEY
+
+# PostgreSQL + PGVector configuration
+pgvector:
+  secret:
+    user: postgres
+    password: test_password
+    dbname: rag_test_db
+    host: pgvector
+    port: "5432"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+
+# MinIO configuration
+minio:
+  secret:
+    user: minio_test_user
+    password: minio_test_password
+    host: minio
+    port: "9000"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Upload sample files for RAG testing
+  sampleFileUpload:
+    enabled: true
+    bucket: documents
+    urls: 
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
+
+# Llama Stack configuration for MaaS
+llama-stack:
+  secrets:
+    # API key will be injected from GitHub secret via helm --set
+    OPENAI_API_KEY: ""
+    TAVILY_SEARCH_API_KEY: ""
+  
+  # Environment variables for MaaS configuration
+  env:
+    # Configure llama-stack to use OpenAI-compatible provider
+    - name: OPENAI_API_KEY
+      value: ""  # Will be set from secrets
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+  
+  # No init containers needed since we're using external MaaS
+  initContainers: []
+
+# Disable components that require OpenShift/KServe CRDs
+llm-service:
+  enabled: false
+
+configure-pipeline:
+  enabled: false
+  persistence:
+    enabled: false
+  pvc:
+    create: false
+
+# MCP servers
+mcp-servers:
+  enabled: false
+
+# Data ingestion pipeline - Enable for upload/RAG testing
+ingestion-pipeline:
+  enabled: true
+  replicaCount: 1
+  defaultPipeline:
+    enabled: true
+    source: S3
+    embedding_model: all-MiniLM-L6-v2
+    name: "test-vector-db"
+    version: "1.0"
+    S3:
+      access_key_id: minio_test_user
+      secret_access_key: minio_test_password
+      bucket_name: documents
+      endpoint_url: http://minio:9000
+      region: us-east-1
+

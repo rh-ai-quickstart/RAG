@@ -1,0 +1,365 @@
+name: E2E Tests with MaaS
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'deploy/helm/**'
+      - 'tests/e2e/**'
+      - '.github/workflows/e2e-tests-maas.yaml'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  MAAS_ENDPOINT: "https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
+  MAAS_MODEL_ID: "llama-3-2-3b"
+
+jobs:
+  e2e-tests-maas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/e2e/requirements.txt
+
+      - name: Create Kind cluster config file
+        run: |
+          cat <<EOF > kind-config.yaml
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+          - role: control-plane
+            extraPortMappings:
+            - containerPort: 30080
+              hostPort: 8501
+              protocol: TCP
+            - containerPort: 30081
+              hostPort: 8321
+              protocol: TCP
+          EOF
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: rag-e2e-maas
+          config: kind-config.yaml
+
+      - name: Install Required CRDs
+        run: |
+          echo "Installing CRDs required by helm chart subcomponents..."
+          
+          # OpenShift Route CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: routes.route.openshift.io
+          spec:
+            group: route.openshift.io
+            names:
+              kind: Route
+              listKind: RouteList
+              plural: routes
+              singular: route
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # KServe InferenceService CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: inferenceservices.serving.kserve.io
+          spec:
+            group: serving.kserve.io
+            names:
+              kind: InferenceService
+              listKind: InferenceServiceList
+              plural: inferenceservices
+              singular: inferenceservice
+            scope: Namespaced
+            versions:
+            - name: v1beta1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # KServe ServingRuntime CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: servingruntimes.serving.kserve.io
+          spec:
+            group: serving.kserve.io
+            names:
+              kind: ServingRuntime
+              listKind: ServingRuntimeList
+              plural: servingruntimes
+              singular: servingruntime
+            scope: Namespaced
+            versions:
+            - name: v1alpha1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # OpenDataHub DataSciencePipelinesApplication CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io
+          spec:
+            group: datasciencepipelinesapplications.opendatahub.io
+            names:
+              kind: DataSciencePipelinesApplication
+              listKind: DataSciencePipelinesApplicationList
+              plural: datasciencepipelinesapplications
+              singular: datasciencepipelinesapplication
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          # Kubeflow Notebook CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: notebooks.kubeflow.org
+          spec:
+            group: kubeflow.org
+            names:
+              kind: Notebook
+              listKind: NotebookList
+              plural: notebooks
+              singular: notebook
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          echo "Waiting for all CRDs to be established..."
+          kubectl wait --for condition=established --timeout=60s crd/routes.route.openshift.io
+          kubectl wait --for condition=established --timeout=60s crd/inferenceservices.serving.kserve.io
+          kubectl wait --for condition=established --timeout=60s crd/servingruntimes.serving.kserve.io
+          kubectl wait --for condition=established --timeout=60s crd/datasciencepipelinesapplications.datasciencepipelinesapplications.opendatahub.io
+          kubectl wait --for condition=established --timeout=60s crd/notebooks.kubeflow.org
+          
+          echo "✅ All required CRDs installed successfully"
+
+      - name: Verify cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl get pods -A
+          kubectl get crds | grep route || echo "Route CRD check"
+
+      - name: Add Helm repository
+        run: |
+          helm repo add rag-charts https://rh-ai-quickstart.github.io/ai-architecture-charts
+          helm repo update
+
+      - name: Build Helm dependencies
+        run: |
+          cd deploy/helm/rag
+          helm dependency build
+
+      - name: Install RAG application with MaaS
+        env:
+          MAAS_API_KEY: ${{ secrets.MAAS_API_KEY }}
+        run: |
+          # Create namespace
+          kubectl create namespace rag-e2e || true
+          
+          # Install the chart with MaaS-enabled e2e values
+          # Note: API key is passed via --set to avoid logging it
+          helm install rag deploy/helm/rag \
+            --namespace rag-e2e \
+            --values tests/e2e/values-e2e-maas.yaml \
+            --set llama-stack.secrets.OPENAI_API_KEY="${MAAS_API_KEY}" \
+            --set-string llama-stack.env[0].name=OPENAI_API_KEY \
+            --set-string llama-stack.env[0].valueFrom.secretKeyRef.name=llamastack-secrets \
+            --set-string llama-stack.env[0].valueFrom.secretKeyRef.key=OPENAI_API_KEY \
+            --set-string llama-stack.env[1].name=OPENAI_BASE_URL \
+            --set-string llama-stack.env[1].value="${MAAS_ENDPOINT}" \
+            --skip-crds \
+            --timeout 20m \
+            --debug
+
+      - name: Wait for core services to be ready
+        run: |
+          echo "========================================="
+          echo "Listing all resources in namespace..."
+          echo "========================================="
+          kubectl get all -n rag-e2e
+          
+          echo ""
+          echo "========================================="
+          echo "Checking deployments..."
+          echo "========================================="
+          kubectl get deployments -n rag-e2e -o wide
+          
+          echo ""
+          echo "========================================="
+          echo "Checking pods..."
+          echo "========================================="
+          kubectl get pods -n rag-e2e -o wide
+          
+          echo ""
+          echo "========================================="
+          echo "Waiting for Llama Stack deployment (10min timeout)..."
+          echo "========================================="
+          kubectl wait --for=condition=available --timeout=600s \
+            deployment/llamastack -n rag-e2e || {
+            echo "❌ Llama Stack deployment failed to become available"
+            echo "Pod status:"
+            kubectl get pods -l app.kubernetes.io/name=llamastack -n rag-e2e
+            echo "Pod logs:"
+            kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=100
+            exit 1
+          }
+          
+          echo ""
+          echo "========================================="
+          echo "Waiting for RAG UI deployment (5min timeout)..."
+          echo "========================================="
+          kubectl wait --for=condition=available --timeout=300s \
+            deployment/rag -n rag-e2e || {
+            echo "❌ RAG UI deployment failed to become available"
+            echo "Pod status:"
+            kubectl get pods -l app.kubernetes.io/name=rag -n rag-e2e
+            echo "Pod logs:"
+            kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=100
+            exit 1
+          }
+          
+          echo ""
+          echo "========================================="
+          echo "Waiting for pods to be ready..."
+          echo "========================================="
+          kubectl wait --for=condition=ready --timeout=600s \
+            pod -l app.kubernetes.io/name=llamastack -n rag-e2e
+          kubectl wait --for=condition=ready --timeout=300s \
+            pod -l app.kubernetes.io/name=rag -n rag-e2e
+          
+          echo ""
+          echo "========================================="
+          echo "✅ ALL CORE SERVICES ARE READY!"
+          echo "========================================="
+          kubectl get pods -n rag-e2e -o wide
+
+      - name: Expose services via NodePort
+        run: |
+          # Expose RAG UI
+          kubectl patch service rag -n rag-e2e -p '{"spec":{"type":"NodePort","ports":[{"port":8501,"nodePort":30080}]}}'
+          
+          # Expose Llama Stack
+          kubectl patch service llamastack -n rag-e2e -p '{"spec":{"type":"NodePort","ports":[{"port":8321,"nodePort":30081}]}}'
+          
+          # Verify services
+          kubectl get services -n rag-e2e
+
+      - name: Port forward services
+        run: |
+          # Start port forwarding in background
+          kubectl port-forward -n rag-e2e svc/rag 8501:8501 &
+          kubectl port-forward -n rag-e2e svc/llamastack 8321:8321 &
+          
+          # Wait for port forwarding to establish
+          sleep 10
+
+      - name: Run E2E tests with MaaS inference
+        env:
+          LLAMA_STACK_ENDPOINT: http://localhost:8321
+          RAG_UI_ENDPOINT: http://localhost:8501
+          INFERENCE_MODEL: ${{ env.MAAS_MODEL_ID }}
+          SKIP_MODEL_TESTS: "false"  # Enable inference tests with MaaS
+        run: |
+          echo "Starting E2E test with MaaS-enabled inference..."
+          echo "Model: ${INFERENCE_MODEL}"
+          echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
+          python tests/e2e/test_user_workflow.py
+
+      - name: Debug - Get pod logs on failure
+        if: failure()
+        run: |
+          echo "=== Deployment status ==="
+          kubectl get deployments -n rag-e2e
+          
+          echo "=== Pod status ==="
+          kubectl get pods -n rag-e2e -o wide
+          
+          echo "=== Service status ==="
+          kubectl get services -n rag-e2e
+          
+          echo "=== Events ==="
+          kubectl get events -n rag-e2e --sort-by='.lastTimestamp'
+          
+          echo "=== RAG UI logs ==="
+          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=200 || echo "No RAG UI logs available"
+          
+          echo "=== Llama Stack logs ==="
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=200 || echo "No Llama Stack logs available"
+          
+          echo "=== PGVector logs ==="
+          kubectl logs -l app.kubernetes.io/name=pgvector -n rag-e2e --tail=100 || echo "No PGVector logs available"
+          
+          echo "=== MinIO logs ==="
+          kubectl logs -l app.kubernetes.io/name=minio -n rag-e2e --tail=100 || echo "No MinIO logs available"
+          
+          echo "=== Ingestion Pipeline logs (if enabled) ==="
+          kubectl logs -l app.kubernetes.io/name=ingestion-pipeline -n rag-e2e --tail=100 || echo "No ingestion pipeline logs"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Kill port-forward processes
+          pkill -f "kubectl port-forward" || true
+          
+          # Optional: Uncomment to delete cluster
+          # kind delete cluster --name rag-e2e-maas
+
