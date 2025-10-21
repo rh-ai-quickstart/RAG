@@ -211,7 +211,7 @@ def test_complete_rag_workflow():
         if response.status_code == 200:
             print("✅ Llama Stack API is responding\n")
         else:
-            print(f"⚠️  Llama Stack returned {response.status_code}, checking basic endpoint...\n")
+            print(f"ℹ️  Note: /health endpoint not available (status {response.status_code}), using root endpoint\n")
             # Try root endpoint as fallback
             response = requests.get(f"{LLAMA_STACK_ENDPOINT}/", timeout=10)
             assert response.status_code in [200, 404], f"Llama Stack not accessible"
