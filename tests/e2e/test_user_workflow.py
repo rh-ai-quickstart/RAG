@@ -287,6 +287,16 @@ def test_complete_rag_workflow():
         skip_inference = False
         print("🧪 Will run model inference tests...\n")
     
+    # Determine the actual model ID to use for API calls
+    # Llama-stack may return models in "provider-id/model-id" format
+    actual_model_id = INFERENCE_MODEL
+    if model_available and model_ids:
+        # Find the matching model and use its full identifier
+        matching_model = next((mid for mid in model_ids if mid and (INFERENCE_MODEL == mid or INFERENCE_MODEL in mid)), None)
+        if matching_model:
+            actual_model_id = matching_model
+            print(f"   Using model ID: '{actual_model_id}' for API calls\n")
+    
     # Step 5: Check UI health endpoint (Streamlit health check)
     print("🏥 Step 5: Checking application health...")
     try:
@@ -305,8 +315,8 @@ def test_complete_rag_workflow():
     if not skip_inference and model_available:
         print("🤖 Running inference tests with available model...\n")
         
-        # Test chat completion
-        chat_passed = test_chat_completion(client, INFERENCE_MODEL, skip_inference)
+        # Test chat completion using the full model identifier
+        chat_passed = test_chat_completion(client, actual_model_id, skip_inference)
         
         # Test RAG query (basic) using the full model identifier
         rag_passed = test_rag_query_with_vector_db(client, actual_model_id, skip_inference)
