@@ -107,8 +107,10 @@ llama-stack:
       cpu: "1"
   
   # Skip waiting for models since we're using external MaaS
+  # Override init containers to prevent waiting for local models
   initContainers: []
-  waitForModels: false
+  # Don't wait for models - they're external via MaaS
+  skipModelWait: true
 
 # Disable components that require OpenShift/KServe CRDs
 llm-service:

@@ -217,10 +217,12 @@ jobs:
           
           # Install the chart with MaaS-enabled e2e values
           # Note: API key is passed via --set to the model's apiToken to avoid logging it
+          # Force empty initContainers to skip waiting for local models
           helm install rag deploy/helm/rag \
             --namespace rag-e2e \
             --values tests/e2e/values-e2e-maas.yaml \
             --set global.models.llama-3-2-3b.apiToken="${MAAS_API_KEY}" \
+            --set-json llama-stack.initContainers='[]' \
             --skip-crds \
             --timeout 20m \
             --debug
