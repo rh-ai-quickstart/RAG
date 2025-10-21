@@ -249,9 +249,19 @@ def test_complete_rag_workflow():
         
         if model_count > 0:
             print(f"   Found {model_count} model(s): {model_ids}")
-            model_available = INFERENCE_MODEL in model_ids
+            
+            # Llama-stack returns models in format: "provider-id/model-id"
+            # Check both exact match and substring match
+            model_available = any(
+                INFERENCE_MODEL == mid or 
+                INFERENCE_MODEL in mid or 
+                mid.endswith(f"/{INFERENCE_MODEL}")
+                for mid in model_ids if mid
+            )
+            
             if model_available:
-                print(f"   ✅ Target model '{INFERENCE_MODEL}' is available")
+                matching_model = next((mid for mid in model_ids if INFERENCE_MODEL == mid or INFERENCE_MODEL in mid), None)
+                print(f"   ✅ Target model '{INFERENCE_MODEL}' is available (as '{matching_model}')")
             else:
                 print(f"   ⚠️  Target model '{INFERENCE_MODEL}' not found, but {model_count} other(s) available")
         else:
