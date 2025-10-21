@@ -228,13 +228,15 @@ def test_complete_rag_workflow():
     model_available = False
     
     try:
+        # Llama-stack uses /v1/openai/v1/* paths for OpenAI-compatible API
+        openai_base_url = f"{LLAMA_STACK_ENDPOINT}/v1/openai/v1"
         client = OpenAI(
             api_key="not_needed",
-            base_url=LLAMA_STACK_ENDPOINT,
+            base_url=openai_base_url,
             timeout=30.0
         )
         
-        print(f"   DEBUG: Calling {LLAMA_STACK_ENDPOINT}/models endpoint...")
+        print(f"   DEBUG: Calling {openai_base_url}/models endpoint...")
         models = client.models.list()
         print(f"   DEBUG: Raw response type: {type(models)}")
         print(f"   DEBUG: Number of models in response: {len(models.data)}")
