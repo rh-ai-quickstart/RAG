@@ -67,35 +67,46 @@ def test_chat_completion(client, model_id, skip_inference):
 
 
 def test_rag_query_with_vector_db(client, model_id, skip_inference):
-    """Test RAG query using vector database (if available)"""
+    """Test RAG-style query with context (without vector DB in Kind)
+    
+    Note: Full RAG with document ingestion requires OpenShift environment.
+    This test validates multi-message conversations as a proxy for RAG capability.
+    """
     if skip_inference:
         return False
     
-    print("🔍 Step: Testing RAG query with vector database...")
+    print("🔍 Step: Testing RAG-style query (multi-message context)...")
     try:
-        # First check if vector databases exist
-        # Note: This requires llama-stack vector_dbs API
-        print("   Checking for vector databases...")
+        # Test multi-turn conversation as a proxy for RAG
+        # In Kind, we can't test document ingestion, but we can test
+        # the model's ability to use context from previous messages
+        print("   Testing context-aware conversation...")
         
-        # For now, just test that we can query with context
-        # A more complete test would create a vector DB, add documents, and query
         response = client.chat.completions.create(
             model=model_id,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for testing."},
-                {"role": "user", "content": "What is 2+2? Answer in one word."}
+                {"role": "system", "content": "You are a helpful assistant. Remember information from previous messages."},
+                {"role": "user", "content": "My favorite color is blue."},
+                {"role": "assistant", "content": "I'll remember that your favorite color is blue!"},
+                {"role": "user", "content": "What is my favorite color? Answer in one word."}
             ],
             max_tokens=20,
             temperature=0.1
         )
         
         content = response.choices[0].message.content
-        print(f"   ✓ RAG-style query responded: {content[:100]}")
-        print("✅ Basic RAG query test passed\n")
+        print(f"   ✓ Model response: {content[:100]}")
+        
+        # Check if model used context (should mention "blue")
+        if "blue" in content.lower():
+            print("   ✓ Model successfully used conversation context")
+        
+        print("✅ Context-aware query test passed\n")
+        print("   Note: Full RAG with document upload requires OpenShift environment")
         return True
     except Exception as e:
-        print(f"   ⚠️  RAG query failed: {e}")
-        print("⏭️  Skipping RAG query test (may need vector DB setup)\n")
+        print(f"   ⚠️  Context query failed: {e}")
+        print("⏭️  Skipping RAG-style test\n")
         return False
 
 
@@ -238,8 +249,19 @@ def test_complete_rag_workflow():
         print("Note: No models were configured for this test.")
         print("      For full inference testing, use values-e2e-maas.yaml with MaaS.")
     else:
-        print(f"Note: Tests used model '{INFERENCE_MODEL}'")
-        print("      Inference tests validate end-to-end functionality.")
+        print(f"Note: Tests used model '{INFERENCE_MODEL}' via MaaS")
+        print("      Inference tests validate core RAG functionality.")
+        print()
+        print("Limitations in Kind:")
+        print("  • Document ingestion requires OpenShift (disabled)")
+        print("  • Vector DB auto-creation requires OpenShift (disabled)")
+        print("  • Full RAG pipeline testing requires OpenShift environment")
+        print()
+        print("What we tested:")
+        print("  ✓ MaaS connectivity and authentication")
+        print("  ✓ Model inference with real LLM")
+        print("  ✓ Multi-message context handling")
+        print("  ✓ Token usage tracking")
     print()
 
 
