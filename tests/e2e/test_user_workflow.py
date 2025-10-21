@@ -308,8 +308,8 @@ def test_complete_rag_workflow():
         # Test chat completion
         chat_passed = test_chat_completion(client, INFERENCE_MODEL, skip_inference)
         
-        # Test RAG query (basic)
-        rag_passed = test_rag_query_with_vector_db(client, INFERENCE_MODEL, skip_inference)
+        # Test RAG query (basic) using the full model identifier
+        rag_passed = test_rag_query_with_vector_db(client, actual_model_id, skip_inference)
     
     print("="*80)
     
