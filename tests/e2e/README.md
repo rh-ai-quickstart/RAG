@@ -1,28 +1,23 @@
 # E2E Tests for RAG Application
 
-End-to-end deployment and functionality tests for Kind-based CI with OpenShift/MicroShift compatibility.
+End-to-end deployment and functionality tests for Kind-based CI with MaaS integration.
 
-## Test Variants
+## Overview
 
-### 1. Basic E2E Tests (`e2e-tests.yaml`)
-Lightweight deployment validation without model inference:
+The E2E tests validate the complete RAG application stack:
 
 1. **RAG UI accessibility** - Verifies Streamlit interface is reachable
 2. **Backend connection** - Confirms Llama Stack service is operational  
 3. **API endpoints** - Validates OpenAI-compatible API responds
-4. **Model inference** - Auto-skipped (no models configured)
+4. **Chat completion** - Tests real model inference via Red Hat MaaS
+5. **RAG queries** - Validates end-to-end RAG workflow with vector DB
+6. **Token usage tracking** - Monitors inference costs
 
-**Use case**: Fast CI checks for deployment health without inference dependencies.
-
-### 2. MaaS-Enabled E2E Tests (`e2e-tests-maas.yaml`)
-Full functionality testing with Red Hat Model-as-a-Service:
-
-1. **All basic tests** - Plus full inference capability
-2. **Chat completion** - Tests real model inference via MaaS
-3. **RAG queries** - Validates end-to-end RAG workflow
-4. **Document ingestion** - Tests upload and vector DB creation
-
-**Use case**: Complete validation of RAG functionality with real model inference.
+**Key Features**:
+- ✅ Uses Red Hat Model-as-a-Service for inference (no local GPU needed)
+- ✅ Runs in Kind cluster (lightweight, fast CI)
+- ✅ Full RAG pipeline testing without OpenShift dependencies
+- ✅ Detailed logging of requests, responses, and token usage
 
 ## Running Locally
 
@@ -90,47 +85,83 @@ rm kind-config.yaml
 
 ## GitHub Actions
 
-### Basic E2E Tests
 Workflow: `.github/workflows/e2e-tests.yaml`
 
+### Triggers
+
 Runs automatically on:
-- Pull requests to `main`
+- Pull requests to `main` (if files changed: frontend/, deploy/helm/, tests/e2e/, .github/workflows/e2e-tests.yaml)
 - Pushes to `main`  
 - Manual trigger via workflow dispatch
 
-Tests deployment health without model inference.
+### Requirements
 
-### MaaS-Enabled E2E Tests
-Workflow: `.github/workflows/e2e-tests-maas.yaml`
+**Required GitHub Secret**: `MAAS_API_KEY`
 
-Runs automatically on:
-- Pull requests to `main` (if files changed: frontend, helm, tests, workflow)
-- Pushes to `main`  
-- Manual trigger via workflow dispatch
+The workflow will **fail with a clear error message** if this secret is not configured.
 
-Tests full RAG functionality with Red Hat MaaS for inference.
+#### Setting up the secret:
 
-**Requirements**: 
-- GitHub secret `MAAS_API_KEY` must be configured
-- Uses model: `llama-3-2-3b` from MaaS
+1. Go to your repository on GitHub
+2. Navigate to: **Settings** → **Secrets and variables** → **Actions**
+3. Click **"New repository secret"**
+4. Add the following:
+   - **Name**: `MAAS_API_KEY`
+   - **Value**: Your Red Hat MaaS API key (e.g., `bba9481a58685eb906c203d9358c3885`)
+5. Click **"Add secret"**
+
+#### Error if secret is missing:
+
+```
+❌ ERROR: MAAS_API_KEY secret is not configured!
+
+To fix this, add the MAAS_API_KEY secret to your repository:
+1. Go to: Settings > Secrets and variables > Actions
+2. Click 'New repository secret'
+3. Name: MAAS_API_KEY
+4. Value: Your Red Hat MaaS API key
+
+For more information, see:
+https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions
+```
+
+### MaaS Configuration
+
+The workflow uses these environment variables (can be overridden with repository secrets):
+
+- **MAAS_ENDPOINT**: `https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1`
+- **MAAS_MODEL_ID**: `llama-3-2-3b`
+- **MAAS_API_KEY**: (from GitHub secret)
+
+All configuration is passed to Helm via `--set` flags, so the values file remains environment-agnostic.
 
 ## Configuration
 
-### Basic Test Configuration (`values-e2e.yaml`)
-Lightweight setup for deployment validation:
-- Disabled: llm-service, configure-pipeline, ingestion-pipeline, mcp-servers
-- CPU-only (no GPU needed)
-- Minimal resources (512Mi RAM, 0.5 CPU)
-- Core services: RAG UI, Llama Stack, pgvector, MinIO
-- No model inference
+### Test Configuration (`values-e2e.yaml`)
 
-### MaaS Test Configuration (`values-e2e-maas.yaml`)
-Full functionality setup with external inference:
-- Enabled: ingestion-pipeline, document upload
-- Configured: MaaS as inference provider
-- Model: `llama-3-2-3b` via OpenAI-compatible API
-- Includes sample document upload for RAG testing
-- Tests chat completion and RAG queries
+The values file provides a base configuration optimized for Kind/CI:
+
+**Disabled components** (require OpenShift):
+- `llm-service` - Local model serving
+- `configure-pipeline` - Pipeline configuration job
+- `ingestion-pipeline` - Document ingestion pipeline
+- `mcp-servers` - Model Context Protocol servers
+
+**Resource limits** (optimized for CI):
+- Llama Stack: 512Mi RAM, 0.5 CPU
+- PGVector: 512Mi RAM, 0.5 CPU  
+- MinIO: 256Mi RAM, 0.25 CPU
+
+**MaaS configuration**:
+- Model configuration is **injected at deployment time** via Helm `--set` flags
+- No hardcoded credentials in version control
+- Flexible: can use different models/endpoints by changing workflow env vars
+
+**Core services enabled**:
+- RAG UI (Streamlit)
+- Llama Stack (orchestration)
+- PGVector (vector database)
+- MinIO (document storage)
 
 ### Environment Variables
 - `LLAMA_STACK_ENDPOINT` - Backend API endpoint (default: `http://localhost:8321`)
@@ -219,21 +250,32 @@ You can test the MaaS integration locally:
 
 ```bash
 # 1. Export your MaaS API key
-export MAAS_API_KEY="your-api-key"
+export MAAS_API_KEY="your-api-key-here"
+export MAAS_MODEL_ID="llama-3-2-3b"
+export MAAS_ENDPOINT="https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
 
-# 2. Create Kind cluster (same as basic e2e)
+# 2. Create Kind cluster (same as Quick Start)
 # ... (see Quick Start section)
 
-# 3. Install with MaaS values
+# 3. Install with MaaS configuration injected via --set
 helm install rag deploy/helm/rag \
   --namespace rag-e2e \
-  --values tests/e2e/values-e2e-maas.yaml \
-  --set llama-stack.secrets.OPENAI_API_KEY="${MAAS_API_KEY}" \
+  --values tests/e2e/values-e2e.yaml \
+  --set global.models.${MAAS_MODEL_ID}.url="${MAAS_ENDPOINT}" \
+  --set global.models.${MAAS_MODEL_ID}.id="${MAAS_MODEL_ID}" \
+  --set global.models.${MAAS_MODEL_ID}.enabled=true \
+  --set global.models.${MAAS_MODEL_ID}.apiToken="${MAAS_API_KEY}" \
+  --set-json llama-stack.initContainers='[]' \
   --skip-crds \
   --timeout 20m
 
-# 4. Run tests with inference enabled
+# 4. Setup port forwarding (same as Quick Start)
+# ... (see Quick Start section)
+
+# 5. Run tests with inference enabled
 export SKIP_MODEL_TESTS=false
 export INFERENCE_MODEL=llama-3-2-3b
+export LLAMA_STACK_ENDPOINT=http://localhost:8321
+export RAG_UI_ENDPOINT=http://localhost:8501
 python tests/e2e/test_user_workflow.py
 ```
