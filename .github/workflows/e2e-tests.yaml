@@ -4,10 +4,19 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - 'deploy/helm/**'
+      - 'tests/e2e/**'
+      - '.github/workflows/e2e-tests.yaml'
   push:
     branches:
       - main
   workflow_dispatch:
+
+env:
+  MAAS_ENDPOINT: ${{ secrets.MAAS_ENDPOINT }}
+  MAAS_MODEL_ID: ${{ secrets.MAAS_MODEL_ID }}
 
 jobs:
   e2e-tests:
@@ -199,17 +208,21 @@ jobs:
           cd deploy/helm/rag
           helm dependency build
 
-      - name: Install RAG application
+      - name: Install RAG application with MaaS
+        env:
+          MAAS_API_KEY: ${{ secrets.MAAS_API_KEY }}
         run: |
           # Create namespace
           kubectl create namespace rag-e2e || true
           
-          # Install the chart with e2e values
-          # Note: Not using --wait because disabled subcharts (configure-pipeline) may create
-          # PVCs that never bind. We'll wait for specific deployments in the next step.
+          # Install the chart with e2e values (includes MaaS configuration)
+          # Note: API key is passed via --set to the model's apiToken to avoid logging it
+          # Force empty initContainers to skip waiting for local models
           helm install rag deploy/helm/rag \
             --namespace rag-e2e \
             --values tests/e2e/values-e2e.yaml \
+            --set global.models.llama-3-2-3b.apiToken="${MAAS_API_KEY}" \
+            --set-json llama-stack.initContainers='[]' \
             --skip-crds \
             --timeout 20m \
             --debug
@@ -235,18 +248,6 @@ jobs:
           
           echo ""
           echo "========================================="
-          echo "Describing llamastack deployment..."
-          echo "========================================="
-          kubectl describe deployment llamastack -n rag-e2e || echo "Llamastack deployment not found"
-          
-          echo ""
-          echo "========================================="
-          echo "Checking events for issues..."
-          echo "========================================="
-          kubectl get events -n rag-e2e --sort-by='.lastTimestamp' | tail -20
-          
-          echo ""
-          echo "========================================="
           echo "Waiting for Llama Stack deployment (10min timeout)..."
           echo "========================================="
           kubectl wait --for=condition=available --timeout=600s \
@@ -254,10 +255,8 @@ jobs:
             echo "❌ Llama Stack deployment failed to become available"
             echo "Pod status:"
             kubectl get pods -l app.kubernetes.io/name=llamastack -n rag-e2e
-            echo "Pod describe:"
-            kubectl describe pods -l app.kubernetes.io/name=llamastack -n rag-e2e
-            echo "Recent events:"
-            kubectl get events -n rag-e2e --sort-by='.lastTimestamp' | tail -30
+            echo "Pod logs:"
+            kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=100
             exit 1
           }
           
@@ -270,63 +269,25 @@ jobs:
             echo "❌ RAG UI deployment failed to become available"
             echo "Pod status:"
             kubectl get pods -l app.kubernetes.io/name=rag -n rag-e2e
-            echo "Pod describe:"
-            kubectl describe pods -l app.kubernetes.io/name=rag -n rag-e2e
-            echo "Recent events:"
-            kubectl get events -n rag-e2e --sort-by='.lastTimestamp' | tail -30
+            echo "Pod logs:"
+            kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=100
             exit 1
           }
           
           echo ""
           echo "========================================="
-          echo "✅ Deployments are available"
-          echo "Current pod status:"
-          echo "========================================="
-          kubectl get pods -n rag-e2e -o wide
-          
-          echo ""
-          echo "========================================="
-          echo "Waiting for llamastack pod to be ready (10min timeout)..."
+          echo "Waiting for pods to be ready..."
           echo "========================================="
           kubectl wait --for=condition=ready --timeout=600s \
-            pod -l app.kubernetes.io/name=llamastack -n rag-e2e || {
-            echo "❌ Llamastack pod failed to become ready"
-            kubectl get pods -l app.kubernetes.io/name=llamastack -n rag-e2e -o wide
-            kubectl describe pods -l app.kubernetes.io/name=llamastack -n rag-e2e
-            kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=100 || echo "No logs available"
-            exit 1
-          }
-          
-          echo ""
-          echo "========================================="
-          echo "Waiting for RAG UI pod to be ready (5min timeout)..."
-          echo "========================================="
+            pod -l app.kubernetes.io/name=llamastack -n rag-e2e
           kubectl wait --for=condition=ready --timeout=300s \
-            pod -l app.kubernetes.io/name=rag -n rag-e2e || {
-            echo "❌ RAG UI pod failed to become ready"
-            kubectl get pods -l app.kubernetes.io/name=rag -n rag-e2e -o wide
-            kubectl describe pods -l app.kubernetes.io/name=rag -n rag-e2e
-            kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=100 || echo "No logs available"
-            exit 1
-          }
+            pod -l app.kubernetes.io/name=rag -n rag-e2e
           
           echo ""
           echo "========================================="
           echo "✅ ALL CORE SERVICES ARE READY!"
           echo "========================================="
           kubectl get pods -n rag-e2e -o wide
-          
-          echo ""
-          echo "========================================="
-          echo "Core service logs (last 50 lines)..."
-          echo "========================================="
-          echo ""
-          echo "=== Llama Stack logs ==="
-          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=50 || echo "Could not get logs"
-          
-          echo ""
-          echo "=== RAG UI logs ==="
-          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=50 || echo "Could not get logs"
 
       - name: Expose services via NodePort
         run: |
@@ -338,19 +299,8 @@ jobs:
           
           # Verify services
           kubectl get services -n rag-e2e
-          
-          # Get the node IP
-          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-          echo "Node IP: $NODE_IP"
-          
-          # Test connectivity from outside cluster
-          echo "Testing connectivity to RAG UI..."
-          curl -f http://localhost:8501/_stcore/health || echo "RAG UI health check failed"
-          
-          echo "Testing connectivity to Llama Stack..."
-          curl -f http://localhost:8321/ || echo "Llama Stack health check failed"
 
-      - name: Port forward services (backup method)
+      - name: Port forward services
         run: |
           # Start port forwarding in background
           kubectl port-forward -n rag-e2e svc/rag 8501:8501 &
@@ -358,17 +308,17 @@ jobs:
           
           # Wait for port forwarding to establish
           sleep 10
-          
-          # Verify forwarding is working
-          netstat -tlnp | grep -E '8501|8321' || echo "Port forwarding status check"
 
-      - name: Run E2E tests
+      - name: Run E2E tests with MaaS inference
         env:
           LLAMA_STACK_ENDPOINT: http://localhost:8321
           RAG_UI_ENDPOINT: http://localhost:8501
-          INFERENCE_MODEL: meta-llama/Llama-3.2-3B-Instruct
+          INFERENCE_MODEL: ${{ env.MAAS_MODEL_ID }}
+          SKIP_MODEL_TESTS: "false"  # Enable inference tests with MaaS
         run: |
-          echo "Starting E2E user workflow test..."
+          echo "Starting E2E test with MaaS-enabled inference..."
+          echo "Model: ${INFERENCE_MODEL}"
+          echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
           python tests/e2e/test_user_workflow.py
 
       - name: Debug - Get pod logs on failure
@@ -387,24 +337,22 @@ jobs:
           kubectl get events -n rag-e2e --sort-by='.lastTimestamp'
           
           echo "=== RAG UI logs ==="
-          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=100 || echo "No RAG UI logs available"
+          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=200 || echo "No RAG UI logs available"
           
-          echo "=== Llama Stack logs ==="
-          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=100 || echo "No Llama Stack logs available"
+          echo "=== Llama Stack logs (CRITICAL - Check model registration) ==="
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=300 || echo "No Llama Stack logs available"
+          
+          echo "=== Llama Stack pod details ==="
+          kubectl describe pod -l app.kubernetes.io/name=llamastack -n rag-e2e || echo "No pod details"
           
           echo "=== PGVector logs ==="
           kubectl logs -l app.kubernetes.io/name=pgvector -n rag-e2e --tail=100 || echo "No PGVector logs available"
           
           echo "=== MinIO logs ==="
           kubectl logs -l app.kubernetes.io/name=minio -n rag-e2e --tail=100 || echo "No MinIO logs available"
-
-      - name: Debug - Describe pods on failure
-        if: failure()
-        run: |
-          for pod in $(kubectl get pods -n rag-e2e -o name); do
-            echo "=== Describing $pod ==="
-            kubectl describe $pod -n rag-e2e
-          done
+          
+          echo "=== Ingestion Pipeline logs (if enabled) ==="
+          kubectl logs -l app.kubernetes.io/name=ingestion-pipeline -n rag-e2e --tail=100 || echo "No ingestion pipeline logs"
 
       - name: Cleanup
         if: always()
@@ -412,7 +360,5 @@ jobs:
           # Kill port-forward processes
           pkill -f "kubectl port-forward" || true
           
-          # Optional: Keep cluster for debugging on failure
-          # Comment out to keep cluster running
+          # Optional: Uncomment to delete cluster
           # kind delete cluster --name rag-e2e
-

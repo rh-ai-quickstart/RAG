@@ -1,6 +1,6 @@
-# E2E test values for OpenShift/MicroShift compatible deployment
-# Tested on Kind with OpenShift CRDs
-# Optimized for minimal resources and fast startup
+# E2E test values with MaaS (Model-as-a-Service) integration
+# This extends values-e2e.yaml with MaaS inference capability
+# Enables full e2e testing including chat completions and RAG queries
 
 replicaCount: 1
 
@@ -46,12 +46,15 @@ volumeMounts:
   - mountPath: /.streamlit
     name: dot-streamlit
 
-# For basic e2e tests, we don't configure models via llm-service
-# This avoids the need for KServe CRDs and model serving infrastructure
-# The tests will verify UI and backend connectivity without full model inference
+# Configure models to use Red Hat MaaS
+# The API key will be injected via helm --set in GitHub Actions
 global:
-  models: {}
-  mcp-servers: {}
+  models:
+    llama-3-2-3b:
+      url: "https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
+      id: "llama-3-2-3b"
+      enabled: true
+      # apiToken will be set via --set during helm install
 
 # PostgreSQL + PGVector configuration
 pgvector:
@@ -84,17 +87,17 @@ minio:
       memory: "512Mi"
       cpu: "500m"
   
-  # Upload sample files for testing - disabled for basic e2e (causes ImagePullBackOff in CI)
+  # Upload sample files - Disabled (requires OpenShift tools image)
   sampleFileUpload:
     enabled: false
     bucket: documents
-    urls: 
-    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
+    urls: []
 
-# Llama Stack configuration
+# Llama Stack configuration for MaaS
 llama-stack:
   secrets:
     TAVILY_SEARCH_API_KEY: ""
+  
   resources:
     requests:
       memory: "512Mi"
@@ -102,16 +105,19 @@ llama-stack:
     limits:
       memory: "1Gi"
       cpu: "1"
-  # Skip waiting for model services since we're not using llm-service
+  
+  # Skip waiting for models since we're using external MaaS
+  # Override init containers to prevent waiting for local models
   initContainers: []
+  # Don't wait for models - they're external via MaaS
+  skipModelWait: true
 
-# Disable components that require OpenShift/KServe CRDs for basic e2e tests
+# Disable components that require OpenShift/KServe CRDs
 llm-service:
   enabled: false
 
 configure-pipeline:
   enabled: false
-  # Explicitly disable PVC creation
   persistence:
     enabled: false
   pvc:
@@ -121,7 +127,9 @@ configure-pipeline:
 mcp-servers:
   enabled: false
 
-# Data ingestion pipeline - MUST be fully disabled to prevent pod creation
+# Data ingestion pipeline - Disabled for Kind (requires OpenShift internal registry)
+# The ingestion pipeline uses OpenShift-specific images that aren't available in Kind
+# For full RAG testing, this would need to be enabled in an OpenShift environment
 ingestion-pipeline:
   enabled: false
   replicaCount: 0

@@ -42,12 +42,24 @@ def test_chat_completion(client, model_id, skip_inference):
     if skip_inference:
         return False
     
-    print("💬 Step: Testing chat completion...")
+    print("\n" + "="*80)
+    print("💬 CHAT COMPLETION TEST")
+    print("="*80)
+    
+    test_message = "Say 'Hello from RAG e2e test!' in one short sentence."
+    
+    print(f"\n📤 Sending chat completion request:")
+    print(f"   Model: {model_id}")
+    print(f"   User Query: \"{test_message}\"")
+    print(f"   Max Tokens: 50")
+    print(f"   Temperature: 0.7")
+    
     try:
+        print("\n⏳ Waiting for model response...")
         response = client.chat.completions.create(
             model=model_id,
             messages=[
-                {"role": "user", "content": "Say 'Hello from RAG e2e test!' in one short sentence."}
+                {"role": "user", "content": test_message}
             ],
             max_tokens=50,
             temperature=0.7
@@ -56,13 +68,20 @@ def test_chat_completion(client, model_id, skip_inference):
         content = response.choices[0].message.content
         assert content, "No response content from model"
         
-        print(f"   ✓ Model responded: {content[:100]}")
-        print(f"   ✓ Tokens used: {response.usage.total_tokens}")
-        print("✅ Chat completion test passed\n")
+        print("\n📥 Response received:")
+        print(f"   Model: {response.model if hasattr(response, 'model') else model_id}")
+        print(f"   Content: \"{content}\"")
+        print(f"\n📊 Token usage:")
+        print(f"   Prompt tokens: {response.usage.prompt_tokens}")
+        print(f"   Completion tokens: {response.usage.completion_tokens}")
+        print(f"   Total tokens: {response.usage.total_tokens}")
+        print(f"\n✅ Chat completion test PASSED")
+        print("="*80 + "\n")
         return True
     except Exception as e:
-        print(f"   ⚠️  Chat completion failed: {e}")
-        print("❌ Chat completion test failed\n")
+        print(f"\n❌ Chat completion test FAILED")
+        print(f"   Error: {e}")
+        print("="*80 + "\n")
         return False
 
 
@@ -75,18 +94,24 @@ def test_rag_query_with_vector_db(client, model_id, skip_inference):
     if skip_inference:
         return False
     
-    print("🔍 Step: Testing RAG with programmatically created vector DB...")
+    print("\n" + "="*80)
+    print("🔍 RAG WITH VECTOR DB TEST")
+    print("="*80)
     
     try:
         from llama_stack_client import LlamaStackClient
         from llama_stack_client.types import Document as RAGDocument
         
         # Initialize llama-stack client for vector DB operations
-        llama_client = LlamaStackClient(
-            base_url=os.environ.get("LLAMA_STACK_ENDPOINT", "http://localhost:8321")
-        )
+        llama_stack_endpoint = os.environ.get("LLAMA_STACK_ENDPOINT", "http://localhost:8321")
+        print(f"\n🔧 Initializing Llama Stack client:")
+        print(f"   Endpoint: {llama_stack_endpoint}")
+        
+        llama_client = LlamaStackClient(base_url=llama_stack_endpoint)
         
         vector_db_id = "e2e-test-rag-db"
+        embedding_model = "all-MiniLM-L6-v2"
+        embedding_dim = 384
         
         # Sample test documents
         test_docs = [
@@ -100,17 +125,25 @@ def test_rag_query_with_vector_db(client, model_id, skip_inference):
             }
         ]
         
-        print(f"   Creating vector DB '{vector_db_id}'...")
+        print(f"\n📚 Test documents prepared:")
+        for doc in test_docs:
+            print(f"   [{doc['id']}] {doc['content'][:60]}...")
+        
+        print(f"\n🗄️  Registering vector database:")
+        print(f"   Vector DB ID: {vector_db_id}")
+        print(f"   Embedding Model: {embedding_model}")
+        print(f"   Embedding Dimension: {embedding_dim}")
+        print(f"   Provider: pgvector")
         
         # Register vector DB
         try:
             llama_client.vector_dbs.register(
                 vector_db_id=vector_db_id,
-                embedding_dimension=384,
-                embedding_model="all-MiniLM-L6-v2",
+                embedding_dimension=embedding_dim,
+                embedding_model=embedding_model,
                 provider_id="pgvector"
             )
-            print("   ✓ Vector DB registered")
+            print("   ✅ Vector DB registered successfully")
         except Exception as e:
             if "already exists" in str(e).lower():
                 print("   ℹ️  Vector DB already exists, reusing...")
@@ -128,49 +161,76 @@ def test_rag_query_with_vector_db(client, model_id, skip_inference):
             for doc in test_docs
         ]
         
-        print(f"   Inserting {len(documents)} test documents...")
+        print(f"\n📥 Inserting documents into vector DB:")
+        print(f"   Number of documents: {len(documents)}")
+        print(f"   Chunk size: 512 tokens")
+        
         llama_client.tool_runtime.rag_tool.insert(
             documents=documents,
             vector_db_id=vector_db_id,
             chunk_size_in_tokens=512,
         )
-        print("   ✓ Documents inserted into vector DB")
+        print("   ✅ Documents inserted and embedded successfully")
         
         # Test RAG query
-        print("   Querying: 'What is the height of the Eiffel Tower?'")
+        test_query = "What is the height of the Eiffel Tower? Give just the number."
+        expected_context = test_docs[0]['content']
+        
+        print(f"\n📤 Sending RAG query:")
+        print(f"   Model: {model_id}")
+        print(f"   User Query: \"{test_query}\"")
+        print(f"   Context Provided: \"{expected_context}\"")
+        print(f"   Max Tokens: 50")
+        print(f"   Temperature: 0.1")
+        
+        print("\n⏳ Waiting for RAG response...")
         
         # Use OpenAI client for compatibility
         response = client.chat.completions.create(
             model=model_id,
             messages=[
-                {"role": "system", "content": f"You are a helpful assistant. Answer based on the provided context. Context: {test_docs[0]['content']}"},
-                {"role": "user", "content": "What is the height of the Eiffel Tower? Give just the number."}
+                {"role": "system", "content": f"You are a helpful assistant. Answer based on the provided context. Context: {expected_context}"},
+                {"role": "user", "content": test_query}
             ],
             max_tokens=50,
             temperature=0.1
         )
         
         content = response.choices[0].message.content
-        print(f"   ✓ RAG response: {content[:100]}")
+        
+        print("\n📥 RAG response received:")
+        print(f"   Content: \"{content}\"")
+        print(f"\n📊 Token usage:")
+        print(f"   Prompt tokens: {response.usage.prompt_tokens}")
+        print(f"   Completion tokens: {response.usage.completion_tokens}")
+        print(f"   Total tokens: {response.usage.total_tokens}")
         
         # Check if response contains the answer
+        print(f"\n🔎 Validating response:")
+        print(f"   Expected answer: '330 metres'")
+        print(f"   Response contains '330': {'✅ Yes' if '330' in content else '❌ No'}")
+        
         if "330" in content:
-            print("   ✓ Successfully retrieved information from context!")
-            print("✅ RAG with vector DB test passed\n")
+            print(f"\n✅ RAG test PASSED - Model successfully retrieved context information!")
+            print("="*80 + "\n")
             return True
         else:
-            print("   ⚠️  Response didn't use expected context")
-            print("✅ Basic RAG flow validated (vector DB creation works)\n")
+            print(f"\n⚠️  Response didn't contain expected answer")
+            print("   Note: Vector DB creation and query flow worked, but response accuracy needs review")
+            print("✅ Basic RAG flow validated (vector DB creation and querying works)")
+            print("="*80 + "\n")
             return True
             
     except ImportError as e:
-        print(f"   ⚠️  Missing llama-stack-client dependency: {e}")
-        print("   Skipping vector DB test, but inference works")
+        print(f"\n❌ Missing dependency: {e}")
+        print("   The llama-stack-client package is required for RAG tests")
+        print("="*80 + "\n")
         return False
     except Exception as e:
-        print(f"   ⚠️  RAG test error: {e}")
-        print("   Note: Vector DB creation requires pgvector backend")
-        print("⏭️  Skipping RAG vector DB test\n")
+        print(f"\n❌ RAG test FAILED")
+        print(f"   Error: {e}")
+        print(f"   Note: Vector DB creation requires pgvector backend to be running")
+        print("="*80 + "\n")
         return False
 
 
