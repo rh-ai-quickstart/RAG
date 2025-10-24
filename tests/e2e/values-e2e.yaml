@@ -47,14 +47,16 @@ volumeMounts:
     name: dot-streamlit
 
 # Configure models to use Red Hat MaaS
-# The API key will be injected via helm --set in GitHub Actions
+# All MaaS configuration (url, id, enabled, apiToken) will be injected via helm --set in GitHub Actions
+# This allows flexible configuration from workflow environment variables
 global:
-  models:
-    llama-3-2-3b:
-      url: "https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
-      id: "llama-3-2-3b"
-      enabled: true
-      # apiToken will be set via --set during helm install
+  models: {}
+    # Example structure (populated by workflow):
+    # llama-3-2-3b:
+    #   url: "https://maas-endpoint/v1"
+    #   id: "llama-3-2-3b"
+    #   enabled: true
+    #   apiToken: "secret-key"
 
 # PostgreSQL + PGVector configuration
 pgvector:
