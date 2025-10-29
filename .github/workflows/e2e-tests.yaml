@@ -7,7 +7,7 @@ on:
     paths:
       - 'frontend/**'
       - 'deploy/helm/**'
-      - 'tests/e2e/**'
+      - 'tests/**'
       - '.github/workflows/e2e-tests.yaml'
   push:
     branches:
@@ -21,9 +21,72 @@ env:
   # MAAS_API_KEY is passed as a secret in the helm install step
 
 jobs:
-  e2e-tests:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install unit test dependencies
+        run: |
+          pip install -r tests/unit/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --tb=short --cov=frontend --cov-report=term-missing
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            .coverage
+            htmlcov/
+
+  integration-tests:
+    name: Integration Tests (Streamlit App)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install integration test dependencies
+        run: |
+          pip install -r tests/integration/requirements.txt
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/test_*.py -v --tb=short
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: pytest-results/
+
+  llamastack-integration-tests:
+    name: LlamaStack Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    needs: unit-tests
     
     steps:
       - name: Checkout repository
@@ -36,7 +99,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          pip install -r tests/e2e/requirements.txt
+          pip install -r tests/integration/llamastack/requirements.txt
 
       - name: Create Kind cluster config file
         run: |
@@ -356,17 +419,17 @@ jobs:
           # Wait for port forwarding to establish
           sleep 10
 
-      - name: Run E2E tests with MaaS inference
+      - name: Run LlamaStack integration tests with MaaS inference
         env:
           LLAMA_STACK_ENDPOINT: http://localhost:8321
           RAG_UI_ENDPOINT: http://localhost:8501
           INFERENCE_MODEL: ${{ env.MAAS_MODEL_ID }}
           SKIP_MODEL_TESTS: "false"  # Enable inference tests with MaaS
         run: |
-          echo "Starting E2E test with MaaS-enabled inference..."
+          echo "Starting LlamaStack integration tests with MaaS-enabled inference..."
           echo "Model: ${INFERENCE_MODEL}"
           echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
-          python tests/e2e/test_user_workflow.py
+          pytest tests/integration/llamastack/ -v --tb=short
 
       - name: Debug - Get pod logs on failure
         if: failure()
@@ -401,6 +464,13 @@ jobs:
           echo "=== Ingestion Pipeline logs (if enabled) ==="
           kubectl logs -l app.kubernetes.io/name=ingestion-pipeline -n rag-e2e --tail=100 || echo "No ingestion pipeline logs"
 
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llamastack-integration-test-results
+          path: pytest-results/
+
       - name: Cleanup
         if: always()
         run: |
@@ -409,3 +479,163 @@ jobs:
           
           # Optional: Uncomment to delete cluster
           # kind delete cluster --name rag-e2e
+
+  ui-e2e-tests:
+    name: UI E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [unit-tests, integration-tests]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install UI test dependencies
+        run: |
+          pip install -r tests/e2e_ui/requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+
+      - name: Create Kind cluster config file
+        run: |
+          cat <<EOF > kind-config.yaml
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+          - role: control-plane
+            extraPortMappings:
+            - containerPort: 30080
+              hostPort: 8501
+              protocol: TCP
+            - containerPort: 30081
+              hostPort: 8321
+              protocol: TCP
+          EOF
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: rag-e2e-ui
+          config: kind-config.yaml
+
+      - name: Install Required CRDs
+        run: |
+          echo "Installing CRDs required by helm chart subcomponents..."
+          
+          # OpenShift Route CRD
+          kubectl apply -f - <<EOF
+          apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: routes.route.openshift.io
+          spec:
+            group: route.openshift.io
+            names:
+              kind: Route
+              listKind: RouteList
+              plural: routes
+              singular: route
+            scope: Namespaced
+            versions:
+            - name: v1
+              served: true
+              storage: true
+              schema:
+                openAPIV3Schema:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+          EOF
+          
+          kubectl wait --for condition=established --timeout=60s crd/routes.route.openshift.io
+          echo "✅ All required CRDs installed successfully"
+
+      - name: Add Helm repository
+        run: |
+          helm repo add rag-charts https://rh-ai-quickstart.github.io/ai-architecture-charts
+          helm repo update
+
+      - name: Build Helm dependencies
+        run: |
+          cd deploy/helm/rag
+          helm dependency build
+
+      - name: Install RAG application
+        env:
+          MAAS_API_KEY: ${{ secrets.MAAS_API_KEY }}
+        run: |
+          kubectl create namespace rag-e2e-ui || true
+          
+          helm install rag deploy/helm/rag \
+            --namespace rag-e2e-ui \
+            --values tests/integration/llamastack/values-e2e.yaml \
+            --set global.models.${MAAS_MODEL_ID}.url="${MAAS_ENDPOINT}" \
+            --set global.models.${MAAS_MODEL_ID}.id="${MAAS_MODEL_ID}" \
+            --set global.models.${MAAS_MODEL_ID}.enabled=true \
+            --set global.models.${MAAS_MODEL_ID}.apiToken="${MAAS_API_KEY}" \
+            --set-json llama-stack.initContainers='[]' \
+            --skip-crds \
+            --timeout 20m \
+            --debug
+
+      - name: Wait for services to be ready
+        run: |
+          kubectl wait --for=condition=available --timeout=600s \
+            deployment/llamastack -n rag-e2e-ui
+          kubectl wait --for=condition=available --timeout=300s \
+            deployment/rag -n rag-e2e-ui
+
+      - name: Expose services via NodePort
+        run: |
+          kubectl patch service rag -n rag-e2e-ui -p '{"spec":{"type":"NodePort","ports":[{"port":8501,"nodePort":30080}]}}'
+          kubectl patch service llamastack -n rag-e2e-ui -p '{"spec":{"type":"NodePort","ports":[{"port":8321,"nodePort":30081}]}}'
+
+      - name: Port forward services
+        run: |
+          kubectl port-forward -n rag-e2e-ui svc/rag 8501:8501 &
+          kubectl port-forward -n rag-e2e-ui svc/llamastack 8321:8321 &
+          sleep 10
+
+      - name: Run UI E2E tests with Playwright
+        env:
+          RAG_UI_ENDPOINT: http://localhost:8501
+          LLAMA_STACK_ENDPOINT: http://localhost:8321
+        run: |
+          pytest tests/e2e_ui/ -v --tb=short --headed --browser chromium
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: |
+            test-results/
+            playwright-report/
+
+      - name: Upload Playwright screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: test-results/
+
+      - name: Debug - Get pod logs on failure
+        if: failure()
+        run: |
+          echo "=== RAG UI logs ==="
+          kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e-ui --tail=200 || echo "No RAG UI logs"
+          
+          echo "=== Llama Stack logs ==="
+          kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e-ui --tail=300 || echo "No Llama Stack logs"
+
+      - name: Cleanup UI tests
+        if: always()
+        run: |
+          pkill -f "kubectl port-forward" || true
+          # kind delete cluster --name rag-e2e-ui

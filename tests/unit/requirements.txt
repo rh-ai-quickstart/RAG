@@ -1,0 +1,7 @@
+pytest==8.3.3
+pytest-mock==3.14.0
+pytest-cov==5.0.0
+llama-stack-client
+llama-stack
+streamlit>=1.31.0
+
