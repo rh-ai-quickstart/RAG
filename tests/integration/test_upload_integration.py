@@ -18,7 +18,7 @@ LLAMA_STACK_ENDPOINT = os.getenv("LLAMA_STACK_ENDPOINT", "http://localhost:8321"
 @pytest.fixture
 def mock_llama_client():
     """Mock LlamaStack client for upload tests"""
-    with patch('llama_stack_ui.distribution.ui.modules.api.LlamaStackClient') as mock_client:
+    with patch('llama_stack_client.LlamaStackClient') as mock_client:
         # Mock providers
         mock_provider = Mock()
         mock_provider.api = "vector_io"
@@ -48,7 +48,7 @@ def mock_uploaded_file():
 class TestDocumentUploadIntegration:
     """Integration tests for document upload workflow"""
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_single_file_upload_workflow(self, mock_api, mock_uploaded_file):
         """Test complete workflow for uploading a single file"""
         from llama_stack_client import RAGDocument
@@ -97,7 +97,7 @@ class TestDocumentUploadIntegration:
         mock_api.client.vector_dbs.register.assert_called_once()
         mock_api.client.tool_runtime.rag_tool.insert.assert_called_once()
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_multiple_files_upload_workflow(self, mock_api):
         """Test uploading multiple files at once"""
         from llama_stack_client import RAGDocument
@@ -166,7 +166,7 @@ class TestDocumentUploadIntegration:
 class TestVectorDBCreation:
     """Integration tests for vector database creation"""
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_vector_db_registration_params(self, mock_api):
         """Test vector DB registration with correct parameters"""
         mock_api.client.providers.list.return_value = [
@@ -188,7 +188,7 @@ class TestVectorDBCreation:
         assert call_args[1]['embedding_model'] == "all-MiniLM-L6-v2"
         assert call_args[1]['provider_id'] == "pgvector"
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_vector_db_with_custom_name(self, mock_api):
         """Test creating vector DB with custom name"""
         mock_api.client.providers.list.return_value = [
@@ -211,7 +211,7 @@ class TestVectorDBCreation:
 class TestProviderDetection:
     """Integration tests for provider detection"""
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_vector_io_provider_detection(self, mock_api):
         """Test that vector_io provider is correctly detected"""
         mock_api.client.providers.list.return_value = [
@@ -228,7 +228,7 @@ class TestProviderDetection:
         
         assert vector_io_provider == "pgvector"
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_no_vector_io_provider(self, mock_api):
         """Test handling when no vector_io provider is available"""
         mock_api.client.providers.list.return_value = [
@@ -248,7 +248,7 @@ class TestProviderDetection:
 class TestDocumentInsertion:
     """Integration tests for document insertion into vector DB"""
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_document_insertion_with_chunks(self, mock_api):
         """Test document insertion with chunking"""
         from llama_stack_client import RAGDocument
@@ -272,7 +272,7 @@ class TestDocumentInsertion:
         call_args = mock_api.client.tool_runtime.rag_tool.insert.call_args
         assert call_args[1]['chunk_size_in_tokens'] == 512
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.page.upload.upload.llama_stack_api')
     def test_empty_document_list(self, mock_api):
         """Test handling of empty document list"""
         documents = []
