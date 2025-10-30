@@ -574,7 +574,7 @@ jobs:
           
           helm install rag deploy/helm/rag \
             --namespace rag-e2e-ui \
-            --values tests/integration/llamastack/values-e2e.yaml \
+            --values tests/e2e/values-e2e.yaml \
             --set global.models.${MAAS_MODEL_ID}.url="${MAAS_ENDPOINT}" \
             --set global.models.${MAAS_MODEL_ID}.id="${MAAS_MODEL_ID}" \
             --set global.models.${MAAS_MODEL_ID}.enabled=true \
