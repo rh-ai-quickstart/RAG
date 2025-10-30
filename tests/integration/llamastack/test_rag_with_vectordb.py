@@ -83,7 +83,7 @@ def create_vector_db(client: LlamaStackClient, vector_db_id: str = "e2e-test-db"
     return vector_db_id
 
 
-def test_rag_query(client: LlamaStackClient, model_id: str, vector_db_id: str):
+def test_rag_query(llama_stack_client: LlamaStackClient, model_id: str, vector_db_id: str):
     """Test RAG query using the populated vector database"""
     print(f"\n🔍 Testing RAG query with vector database...")
     
@@ -93,7 +93,7 @@ def test_rag_query(client: LlamaStackClient, model_id: str, vector_db_id: str):
     
     try:
         # Query using RAG - this should retrieve relevant context from vector DB
-        response = client.inference.chat_completion(
+        response = llama_stack_client.inference.chat_completion(
             model_id=model_id,
             messages=[
                 {
