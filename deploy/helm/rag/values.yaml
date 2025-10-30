@@ -124,11 +124,13 @@ global:
 
 # Hugging Face Token for model downloads
 llm-service:
+  enabled: true
   secret:
     hf_token: ""
     enabled: true
 
 pgvector:
+  enabled: true
   secret:
     user: postgres
     password: rag_password
@@ -137,6 +139,7 @@ pgvector:
     port: "5432"
 
 minio:
+  enabled: true
   secret:
     user: minio_rag_user
     password: minio_rag_password
@@ -154,8 +157,18 @@ minio:
 
 
 llama-stack:
+  enabled: true
   secrets:
     TAVILY_SEARCH_API_KEY: "Paste-your-key-here"
+
+configure-pipeline:
+  enabled: true
+
+ingestion-pipeline:
+  enabled: true
+
+mcp-servers:
+  enabled: true
 
 
 # ingestion-pipeline:
