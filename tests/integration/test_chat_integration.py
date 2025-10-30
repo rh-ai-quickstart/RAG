@@ -103,7 +103,7 @@ class TestChatPageIntegration:
 class TestDirectModeIntegration:
     """Integration tests for direct mode (non-agent) chat"""
     
-    @patch('llama_stack_ui.distribution.ui.page.playground.chat.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
     def test_direct_mode_rag_query_with_vector_db(self, mock_api):
         """Test direct mode RAG query with vector database"""
         # Mock RAG query response
@@ -124,7 +124,7 @@ class TestDirectModeIntegration:
         assert "330" in rag_response.content
         mock_api.client.tool_runtime.rag_tool.query.assert_called_once()
     
-    @patch('llama_stack_ui.distribution.ui.page.playground.chat.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
     def test_direct_mode_inference_without_rag(self, mock_api):
         """Test direct mode inference without RAG"""
         # Mock inference response
@@ -184,7 +184,7 @@ class TestAgentModeIntegration:
         assert regular_value == "Regular"
         assert react_value == "ReAct"
     
-    @patch('llama_stack_ui.distribution.ui.page.playground.chat.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
     def test_react_agent_response_handling(self, mock_api):
         """Test ReAct agent response parsing"""
         import json
@@ -248,7 +248,7 @@ class TestMessageHistoryIntegration:
 class TestShieldIntegration:
     """Integration tests for safety shields"""
     
-    @patch('llama_stack_ui.distribution.ui.page.playground.chat.llama_stack_api')
+    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
     def test_shield_configuration(self, mock_api):
         """Test that shields can be configured"""
         # Mock shields
