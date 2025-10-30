@@ -1,7 +1,7 @@
 pytest==8.3.3
 pytest-mock==3.14.0
 pytest-asyncio==0.24.0
-llama-stack-client
+llama-stack-client>=0.2.9,<0.2.13
 requests
 streamlit>=1.31.0
 
