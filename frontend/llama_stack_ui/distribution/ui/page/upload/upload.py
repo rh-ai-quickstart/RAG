@@ -1,8 +1,7 @@
 import streamlit as st
-from modules.api import llama_stack_api
-from modules.utils import data_url_from_file
 from llama_stack_client import RAGDocument
-
+from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
+from llama_stack_ui.distribution.ui.modules.utils import data_url_from_file
 
 def upload_page():
     """
