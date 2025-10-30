@@ -60,6 +60,7 @@ global:
 
 # PostgreSQL + PGVector configuration
 pgvector:
+  enabled: true
   secret:
     user: postgres
     password: test_password
@@ -76,6 +77,7 @@ pgvector:
 
 # MinIO configuration
 minio:
+  enabled: true
   secret:
     user: minio_test_user
     password: minio_test_password
@@ -97,6 +99,7 @@ minio:
 
 # Llama Stack configuration for MaaS
 llama-stack:
+  enabled: true
   secrets:
     TAVILY_SEARCH_API_KEY: ""
   
