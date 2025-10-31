@@ -606,7 +606,13 @@ jobs:
         env:
           RAG_UI_ENDPOINT: http://localhost:8501
           LLAMA_STACK_ENDPOINT: http://localhost:8321
+          MAAS_ENDPOINT: ${{ env.MAAS_ENDPOINT }}
+          MAAS_MODEL_ID: ${{ env.MAAS_MODEL_ID }}
+          SKIP_MODEL_TESTS: "false"  # Enable MaaS inference tests in UI
         run: |
+          echo "Running UI E2E tests with MaaS integration..."
+          echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
+          echo "MaaS Model ID: ${MAAS_MODEL_ID}"
           pytest tests/e2e_ui/ -v --tb=short --browser chromium
 
       - name: Upload Playwright test results
