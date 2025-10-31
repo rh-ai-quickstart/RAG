@@ -607,7 +607,7 @@ jobs:
           RAG_UI_ENDPOINT: http://localhost:8501
           LLAMA_STACK_ENDPOINT: http://localhost:8321
         run: |
-          pytest tests/e2e_ui/ -v --tb=short --headed --browser chromium
+          pytest tests/e2e_ui/ -v --tb=short --browser chromium
 
       - name: Upload Playwright test results
         if: always()
