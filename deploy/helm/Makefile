@@ -471,6 +471,10 @@ install: ## Install the RAG deployment
 	if [ -n "$(LLM)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Enabling LLM model: $(LLM)"; \
 		HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).enabled=true"; \
+		if [ -n "$(DEVICE)" ]; then \
+			echo -e "$(BLUE)[INFO]$(NC) Setting LLM model device: $(DEVICE)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).device=$(DEVICE)"; \
+		fi; \
 		if [ -n "$(LLM_TOLERATION)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM toleration: $(LLM_TOLERATION)"; \
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].key=$(LLM_TOLERATION)"; \
@@ -489,6 +493,10 @@ install: ## Install the RAG deployment
 	if [ -n "$(SAFETY)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Enabling SAFETY model: $(SAFETY)"; \
 		HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).enabled=true"; \
+		if [ -n "$(DEVICE)" ]; then \
+			echo -e "$(BLUE)[INFO]$(NC) Setting SAFETY model device: $(DEVICE)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).device=$(DEVICE)"; \
+		fi; \
 		if [ -n "$(SAFETY_TOLERATION)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting SAFETY toleration: $(SAFETY_TOLERATION)"; \
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).tolerations[0].key=$(SAFETY_TOLERATION)"; \
