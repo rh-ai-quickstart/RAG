@@ -123,6 +123,7 @@ global:
 
 # Hugging Face Token for model downloads
 llm-service:
+  enabled: true
   secret:
     hf_token: ""
     enabled: true
@@ -136,27 +137,37 @@ pgvector:
     host: pgvector
     port: "5432"
 
-configure-pipeline:
-  minio:
-    secret:
-      user: minio_rag_user
-      password: minio_rag_password
-      host: minio
-      port: "9000"
-    
-      # Upload sample files to the minio bucket 
-    sampleFileUpload:
-      enabled: true
-      bucket: documents
-      urls: 
-      - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
-      - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_and_the_Town_of_Tumble_Town.pdf
-      - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
+minio:
+  enabled: true
+  secret:
+    user: minio_rag_user
+    password: minio_rag_password
+    host: minio
+    port: "9000"
+  
+    # Upload sample files to the minio bucket 
+  sampleFileUpload:
+    enabled: true
+    bucket: documents
+    urls: 
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_Grand_Invention.pdf
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_and_the_Town_of_Tumble_Town.pdf
+    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
 
 
 llama-stack:
+  enabled: true
   secrets:
     TAVILY_SEARCH_API_KEY: "Paste-your-key-here"
+
+configure-pipeline:
+  enabled: true
+
+ingestion-pipeline:
+  enabled: true
+
+mcp-servers:
+  enabled: true
 
 
 # Suggested Questions Configuration
