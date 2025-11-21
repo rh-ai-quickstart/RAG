@@ -10,10 +10,10 @@ requires-python = ">=3.12"
 dependencies = [
     "streamlit",
     "pandas",
-    "llama-stack-client==__LLAMASTACK_VERSION__",
+    "llama-stack-client==0.2.23",
     "requests",
     "streamlit-option-menu",
-    "llama-stack==__LLAMASTACK_VERSION__",
+    "llama-stack==0.2.23",
     "fire",
 ]
 

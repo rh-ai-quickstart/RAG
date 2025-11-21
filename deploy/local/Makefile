@@ -19,7 +19,7 @@ PROJECT_NAME := rag
 OLLAMA_MODEL := llama3.2:3b-instruct-fp16
 
 # UI Build Configuration
-VERSION ?= 0.2.22
+VERSION ?= 0.2.23
 TAVILY_SEARCH_API_KEY ?= ""
 CONTAINER_REGISTRY ?= quay.io/rh-ai-quickstart
 DIST_UI_DIR := $(abspath ../../frontend)
@@ -296,7 +296,7 @@ config: ## Show current configuration
 # UI Build and Deployment Targets
 build-ui: ## Build the RAG UI container locally
 	@echo "$(BLUE)[INFO]$(NC) Building RAG UI container for $(PLATFORM)..."
-	@podman build --platform $(PLATFORM) --build-arg IMAGE_TAG=$(VERSION) -t llamastack-dist-ui:$(VERSION) -f $(DIST_UI_DIR)/Containerfile $(DIST_UI_DIR)
+	@podman build --platform $(PLATFORM) -t llamastack-dist-ui:$(VERSION) -f $(DIST_UI_DIR)/Containerfile $(DIST_UI_DIR)
 	@echo "$(GREEN)[SUCCESS]$(NC) RAG UI container built successfully."
 
 build-and-push-ui: build-ui ## Build and push UI container to registry

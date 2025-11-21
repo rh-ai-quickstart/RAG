@@ -1,21 +1,22 @@
-name: Build and push image
+name: Build dev image
 
 on:
   push:
     branches:
-      - 'main'
-  workflow_dispatch:
+      - dev
 
 jobs:
-  build-and-push:
-    if: github.repository == 'rh-ai-quickstart/RAG'
+  build-dev:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: write
     strategy:
       matrix:
         include:
           - name: llamastack-dist-ui
             context: frontend
-            chart: deploy/helm/rag/Chart.yaml
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,18 +31,18 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Extract version from Chart.yaml
-        id: version
+      - name: Generate dev tag
+        id: tag
         run: |
-          version=$(grep '^version:' ${{ matrix.chart }} | awk '{print $2}')
-          echo "tag=$version" >> $GITHUB_OUTPUT
+          short_sha=$(git rev-parse --short HEAD)
+          echo "value=dev-${short_sha}" >> $GITHUB_OUTPUT
 
-      - name: Build and push ${{ matrix.name }}
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Containerfile
           push: true
-          tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.version.outputs.tag }}
-          build-args: |
-            IMAGE_TAG=${{ steps.version.outputs.tag }}
+          tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.tag.outputs.value }}
+          cache-from: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache
+          cache-to: type=registry,ref=quay.io/rh-ai-quickstart/${{ matrix.name }}:buildcache,mode=max

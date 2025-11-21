@@ -62,8 +62,6 @@ services:
     build:
       context: ../../frontend
       dockerfile: Containerfile
-      args:
-        IMAGE_TAG: "0.2.9"
     container_name: rag-ui
     depends_on:
       llamastack:

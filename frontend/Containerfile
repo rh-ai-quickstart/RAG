@@ -3,19 +3,19 @@
 
 FROM python:3.12-slim
 
-ARG IMAGE_TAG
 WORKDIR /app
-COPY . /app/
 
-
-# Make sure IMAGE_TAG is set
-RUN if [ -z "$IMAGE_TAG" ]; then echo "IMAGE_TAG is not set"; exit 1; fi
-
-# Replace __LLAMASTACK_VERSION__ with actual version in pyproject.toml
-RUN sed -i "s/__LLAMASTACK_VERSION__/${IMAGE_TAG}/g" pyproject.toml
-
-# Install uv
+# Install uv first (rarely changes)
 RUN pip install uv
+
+# Copy dependency file first (for better caching)
+COPY pyproject.toml ./
+
+# Install dependencies only (cached unless pyproject.toml changes)
+RUN uv pip install --system -r pyproject.toml
+
+# Copy application code (invalidates cache only on code changes)
+COPY . /app/
 
 # Set UV cache directory to a writable location
 ENV UV_CACHE_DIR=/app/.uv-cache
@@ -24,15 +24,6 @@ ENV XDG_CACHE_HOME=/app/.cache
 # Create cache directories with proper permissions
 RUN mkdir -p /app/.uv-cache /app/.cache && \
     chmod -R 777 /app/.uv-cache /app/.cache
-
-# Install dependencies using uv
-RUN if [ -f "uv.lock" ]; then \
-        echo "Lockfile found, using frozen sync"; \
-        uv sync --frozen; \
-    else \
-        echo "Lockfile not found, creating new one"; \
-        uv sync; \
-    fi
 
 # Ensure all app files have proper ownership and permissions for non-root users
 RUN chown -R 1001:0 /app && \

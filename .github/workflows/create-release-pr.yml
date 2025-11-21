@@ -1,0 +1,94 @@
+name: Create Release PR
+
+on:
+  workflow_dispatch:
+    branches:
+      - dev
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current_version
+        run: |
+          version=$(grep '^version:' deploy/helm/rag/Chart.yaml | awk '{print $2}')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          current="${{ steps.current_version.outputs.version }}"
+          IFS='.' read -r major minor patch <<< "$current"
+
+          case "${{ inputs.version_bump }}" in
+            major)
+              new_version="$((major + 1)).0.0"
+              ;;
+            minor)
+              new_version="${major}.$((minor + 1)).0"
+              ;;
+            patch)
+              new_version="${major}.${minor}.$((patch + 1))"
+              ;;
+          esac
+
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "New version will be: $new_version"
+
+      - name: Update Chart version
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.new_version.outputs.version }}/" deploy/helm/rag/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"${{ steps.new_version.outputs.version }}\"/" deploy/helm/rag/Chart.yaml
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b release/v${{ steps.new_version.outputs.version }}
+          git add deploy/helm/rag/Chart.yaml
+          git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
+          git push origin release/v${{ steps.new_version.outputs.version }}
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Release v${{ steps.new_version.outputs.version }}" \
+            --body "$(cat <<'EOF'
+          ## Release v${{ steps.new_version.outputs.version }}
+
+          This PR merges changes from \`dev\` to \`main\` for release v${{ steps.new_version.outputs.version }}.
+
+          ### Changes
+          $(git log main..dev --oneline --no-merges | head -20)
+
+          ### Checklist
+          - [ ] All tests passing
+          - [ ] Documentation updated
+          - [ ] Breaking changes documented (if any)
+
+          After merging, this will automatically:
+          - Create git tag v${{ steps.new_version.outputs.version }}
+          - Build and push Docker images
+          EOF
+          )" \
+            --base main \
+            --head release/v${{ steps.new_version.outputs.version }}

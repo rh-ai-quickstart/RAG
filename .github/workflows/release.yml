@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release:
+    if: |
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: llamastack-dist-ui
+            context: frontend
+            chart: deploy/helm/rag/Chart.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from Chart.yaml
+        id: version
+        run: |
+          version=$(grep '^version:' ${{ matrix.chart }} | awk '{print $2}')
+          echo "value=$version" >> $GITHUB_OUTPUT
+
+      - name: Delete release branch
+        run: |
+          git push origin --delete ${{ github.event.pull_request.head.ref }} || true
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.version.outputs.value }}" -m "Release v${{ steps.version.outputs.value }}" || true
+          git push origin "v${{ steps.version.outputs.value }}" || true
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Update Helm dependencies
+        run: |
+          helm dependency update deploy/helm/rag
+
+      - name: Package Helm chart
+        run: |
+          helm package deploy/helm/rag -d .
+          ls -la rag-*.tgz
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.version.outputs.value }}" \
+            --title "Release v${{ steps.version.outputs.value }}" \
+            --notes "Release v${{ steps.version.outputs.value }}" \
+            --latest \
+            rag-${{ steps.version.outputs.value }}.tgz || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Containerfile
+          push: true
+          tags: quay.io/rh-ai-quickstart/${{ matrix.name }}:${{ steps.version.outputs.value }}
