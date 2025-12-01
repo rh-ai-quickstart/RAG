@@ -38,6 +38,8 @@ This guide walks you through running a Llama Stack server locally using **Ollama
 
 You can install Ollama manually or use the automated setup:
 
+** Note: If running on Apple Silicon please read [Apple Silicon Guide](./AppleSiliconReadMe.md)
+
 ```bash
 # Automated setup (recommended - from deploy/local directory)
 cd deploy/local
