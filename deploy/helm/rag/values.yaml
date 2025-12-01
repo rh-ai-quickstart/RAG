@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: quay.io/rh-ai-quickstart/llamastack-dist-ui
   pullPolicy: Always
-  tag: latest-dev
+  tag: 0.2.28
 
 service:
   type: ClusterIP
