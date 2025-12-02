@@ -18,7 +18,7 @@ on:
 env:
   MAAS_ENDPOINT: ${{ secrets.MAAS_ENDPOINT }}
   MAAS_MODEL_ID: ${{ secrets.MAAS_MODEL_ID }}
-    # MAAS_API_KEY is passed as a secret in the helm install step
+  # MAAS_API_KEY is passed as a secret in the helm install step
 
 jobs:
   unit-tests:
@@ -87,6 +87,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: unit-tests
+    # Skip this job for fork PRs since secrets are not available
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     
     steps:
       - name: Checkout repository
@@ -291,12 +293,20 @@ jobs:
             echo ""
             echo "❌ ERROR: MAAS_API_KEY secret is not configured!"
             echo ""
+            # Check if this is a fork PR
+            if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+              echo "⚠️  This appears to be a pull request from a fork."
+              echo "GitHub Actions does not provide access to secrets for security reasons"
+              echo "when running workflows triggered by pull requests from forks."
+            fi
+            echo ""
             echo "To fix this, add the MAAS_API_KEY secret to your repository:"
             echo "1. Go to: Settings > Secrets and variables > Actions"
             echo "2. Click 'New repository secret'"
             echo "3. Name: MAAS_API_KEY"
             echo "4. Value: Your Red Hat MaaS API key"
             echo ""
+            echo "Note: For fork PRs, these tests will be skipped automatically."
             echo "For more information, see:"
             echo "https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
             echo ""
@@ -480,11 +490,40 @@ jobs:
           # Optional: Uncomment to delete cluster
           # kind delete cluster --name rag-e2e
 
+  fork-pr-notice:
+    name: Fork PR Notice
+    runs-on: ubuntu-latest
+    # Only run this job for fork PRs
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - name: Notice about skipped tests
+        run: |
+          echo "## ⚠️ Fork Pull Request Detected"
+          echo ""
+          echo "This pull request is from a fork. For security reasons, GitHub Actions does not"
+          echo "provide access to repository secrets (like \`MAAS_API_KEY\`) for workflows triggered"
+          echo "by pull requests from forks."
+          echo ""
+          echo "**The following tests have been skipped:**"
+          echo "- LlamaStack Integration Tests (requires MAAS_API_KEY)"
+          echo "- UI E2E Tests (requires MAAS_API_KEY)"
+          echo ""
+          echo "**Tests that still run:**"
+          echo "- ✅ Unit Tests"
+          echo "- ✅ Integration Tests (Streamlit App)"
+          echo ""
+          echo "The MaaS-dependent tests will run automatically when this PR is merged to \`main\`."
+          echo ""
+          echo "For more information, see:"
+          echo "https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
+
   ui-e2e-tests:
     name: UI E2E Tests (Playwright)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [unit-tests, integration-tests]
+    # Skip this job for fork PRs since secrets are not available
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     
     steps:
       - name: Checkout repository
