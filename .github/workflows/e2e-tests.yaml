@@ -16,9 +16,9 @@ on:
 
 # MaaS configuration - can be overridden with repository secrets for different environments
 env:
-  MAAS_ENDPOINT: "https://llama-3-2-3b-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1"
-  MAAS_MODEL_ID: "llama-3-2-3b"
-  # MAAS_API_KEY is passed as a secret in the helm install step
+  MAAS_ENDPOINT: ${{ secrets.MAAS_ENDPOINT }}
+  MAAS_MODEL_ID: ${{ secrets.MAAS_MODEL_ID }}
+    # MAAS_API_KEY is passed as a secret in the helm install step
 
 jobs:
   unit-tests:
