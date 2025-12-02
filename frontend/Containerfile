@@ -28,6 +28,7 @@ RUN mkdir -p /app/.uv-cache /app/.cache && \
 # Ensure all app files have proper ownership and permissions for non-root users
 RUN chown -R 1001:0 /app && \
     chmod -R g+rwX /app
+    
 
 EXPOSE 8501
 
