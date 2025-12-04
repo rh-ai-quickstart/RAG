@@ -227,6 +227,10 @@ suggestedQuestions:
 
 # Ingestion Pipeline Configuration
 ingestion-pipeline:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: rag-pipeline-notebook
   pipelines:
     # GitHub-based pipeline
     hr-pipeline:
