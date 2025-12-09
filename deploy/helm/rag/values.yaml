@@ -119,7 +119,13 @@ volumeMounts:
 
 global:
   models: {}
-  mcp-servers: {}
+  mcp-servers:
+    github-mcp:
+      enabled: false
+      uri: http://mcp-github-mcp:8080  # Connection URI (proxy in front)
+      deploymentMode: deployment       # Deployed as a k8s deployment
+      transport: streamable-http       # Changed from 'sse' to 'streamable-http'
+      port: 8080
 
 # Hugging Face Token for model downloads
 llm-service:

@@ -239,6 +239,23 @@ When prompted, enter your **[Hugging Face Token](https://huggingface.co/settings
 
 Note: This process may take 10 to 30 minutes depending on the number and size of models to be downloaded.
 
+Note: If you intend on using tool calling with our MCP servers please make sure to enable tool calling. For example
+in the models section undeneath the model def place the corresponding flags for your model. 
+
+```
+      # NOTE: This is a test configuration for the llama-3-2-3b-instruct model
+      # This is not the default configuration for the llama-3-2-3b-instruct model
+      # if you want to use tool calling, uncomment the following lines
+      # args:
+      #   - --enable-auto-tool-choice
+      #   - --chat-template
+      #   - /vllm-workspace/examples/tool_chat_template_llama3.2_json.jinja
+      #   - --tool-call-parser
+      #   - llama3_json
+      #   - --max-model-len
+      #   - "30444"
+```
+
 7. **Monitor Deployment**
 
 ```bash
