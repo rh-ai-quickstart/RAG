@@ -507,6 +507,7 @@ install: ## Install the RAG deployment
 	if [ -n "$(DEVICE)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Setting device: $(DEVICE)"; \
 		HELM_ARGS="$$HELM_ARGS --set llm-service.device='$(DEVICE)'"; \
+		HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).device=$(DEVICE)"; \
 	fi; \
 	if [ -n "$(HF_TOKEN)" ]; then \
 		echo -e "$(BLUE)[INFO]$(NC) Setting HF_TOKEN from command line"; \
