@@ -1,0 +1,91 @@
+{{/*
+Embedding Warmup Job
+This job ensures the embedding model is fully loaded before ingestion pipelines run.
+It prevents the race condition where pipelines try to embed documents before the embedding model is ready.
+*/}}
+{{- if .Values.global.embeddingWarmup.enabled | default true }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "rag.fullname" . }}-embedding-warmup
+  labels:
+    {{- include "rag.labels" . | nindent 4 }}
+    app.kubernetes.io/component: embedding-warmup
+  annotations:
+    # Run as a post-install hook with low weight to run early
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        {{- include "rag.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: embedding-warmup
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: warmup
+          image: "image-registry.openshift-image-registry.svc:5000/openshift/tools:latest"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LLAMASTACK_URL
+              value: "http://llamastack:8321"
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.global.embeddingWarmup.model | default "all-MiniLM-L6-v2" | quote }}
+            - name: MAX_RETRIES
+              value: {{ .Values.global.embeddingWarmup.maxRetries | default "60" | quote }}
+            - name: RETRY_INTERVAL
+              value: {{ .Values.global.embeddingWarmup.retryInterval | default "5" | quote }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "=== Embedding Model Warmup Job ==="
+              echo "LlamaStack URL: $LLAMASTACK_URL"
+              echo "Embedding Model: $EMBEDDING_MODEL"
+              echo "Max Retries: $MAX_RETRIES"
+              echo "Retry Interval: ${RETRY_INTERVAL}s"
+              echo ""
+              
+              # First wait for LlamaStack to be available
+              echo "Step 1: Waiting for LlamaStack to be available..."
+              retries=0
+              until curl -sf "$LLAMASTACK_URL/v1/models" > /dev/null 2>&1; do
+                retries=$((retries + 1))
+                if [ $retries -ge $MAX_RETRIES ]; then
+                  echo "ERROR: LlamaStack not available after $MAX_RETRIES retries"
+                  exit 1
+                fi
+                echo "  Waiting for LlamaStack... (attempt $retries/$MAX_RETRIES)"
+                sleep $RETRY_INTERVAL
+              done
+              echo "  LlamaStack is available!"
+              echo ""
+              
+              # Now warm up the embedding model by making an actual embedding request
+              echo "Step 2: Warming up embedding model..."
+              retries=0
+              until curl -sf -X POST "$LLAMASTACK_URL/v1/inference/embeddings" \
+                -H "Content-Type: application/json" \
+                -d "{\"model_id\": \"$EMBEDDING_MODEL\", \"contents\": [\"warmup test\"]}" \
+                --max-time 30 \
+                | grep -q "embeddings"; do
+                retries=$((retries + 1))
+                if [ $retries -ge $MAX_RETRIES ]; then
+                  echo "ERROR: Embedding model not ready after $MAX_RETRIES retries"
+                  exit 1
+                fi
+                echo "  Waiting for embedding model to load... (attempt $retries/$MAX_RETRIES)"
+                sleep $RETRY_INTERVAL
+              done
+              echo "  Embedding model is ready!"
+              echo ""
+              
+              echo "=== Warmup Complete ==="
+              echo "The embedding model is now loaded and ready for ingestion pipelines."
+{{- end }}
+

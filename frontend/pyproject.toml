@@ -15,6 +15,7 @@ dependencies = [
     "streamlit-option-menu",
     "llama-stack==0.2.23",
     "fire",
+    "asyncpg",
 ]
 
 [tool.setuptools]

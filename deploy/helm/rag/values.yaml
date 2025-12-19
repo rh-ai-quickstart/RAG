@@ -120,6 +120,13 @@ volumeMounts:
 global:
   models: {}
   mcp-servers: {}
+  # Embedding warmup configuration
+  # Ensures the embedding model is loaded before ingestion pipelines run
+  embeddingWarmup:
+    enabled: true
+    model: "all-MiniLM-L6-v2"
+    maxRetries: 60      # Maximum number of retries (60 * 5s = 5 minutes max wait)
+    retryInterval: 5    # Seconds between retries
 
 # Hugging Face Token for model downloads
 llm-service:
