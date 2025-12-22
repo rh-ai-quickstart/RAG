@@ -117,7 +117,7 @@ volumeMounts:
 #       - --distributed-executor-backend=mp
 #       - --dtype=auto
 #       - --max-model-len=8000
-#     Example of xeon configuration:
+#     # Example Xeon configuration:
 #     llama-3-2-3b-instruct:
 #       id: meta-llama/Llama-3.2-3B-Instruct
 #       enabled: true
@@ -127,7 +127,7 @@ volumeMounts:
 #         memory: 64Gi
 #       requests:
 #         cpu: "16"
-#         memory: 32Gi
+#         memory: 64Gi
 #       args:
 #       - --max-model-len
 #       - "14336"

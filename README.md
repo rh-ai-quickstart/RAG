@@ -62,6 +62,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 ### Minimum hardware requirements 
 - 1 GPU/HPU with 24GB of VRAM for the LLM, refer to the [chart below](#supported-models)
 - 1 GPU/HPU with 24GB of VRAM for the safety/shield model (optional)
+- Xeon deployments: one worker node with Intel Xeon processors, Sapphire Rapids (SPR) or newer (EMR/GNR), e.g. r7i.8xlarge, m8i.8xlarge
+  - vLLM requires a minimum of 16 vCPUs and 64 GB of RAM to run
 
 ### Minimum software requirements 
 - OpenShift Client CLI - [oc](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/cli_tools/openshift-cli-oc#installing-openshift-cli)
@@ -92,8 +94,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | Function    | Model Name                             | Hardware    | AWS
 |-------------|----------------------------------------|-------------|-------------
 | Embedding   | `all-MiniLM-L6-v2`                     | CPU/GPU/HPU |
-| Generation  | `meta-llama/Llama-3.2-3B-Instruct`     | L4/HPU      | g6.2xlarge
-| Generation  | `meta-llama/Llama-3.1-8B-Instruct`     | L4/HPU      | g6.2xlarge
+| Generation  | `meta-llama/Llama-3.2-3B-Instruct`     | L4/HPU<br>Xeon | g6.2xlarge<br>m8i.8xlarge
+| Generation  | `meta-llama/Llama-3.1-8B-Instruct`     | L4/HPU<br>Xeon | g6.2xlarge<br>m8i.8xlarge
 | Generation  | `meta-llama/Meta-Llama-3-70B-Instruct` | A100 x2/HPU | p4d.24xlarge
 | Safety      | `meta-llama/Llama-Guard-3-8B`          | L4/HPU      | g6.2xlarge
 
@@ -220,6 +222,15 @@ To install on CPU nodes only:
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct DEVICE=cpu
 ```
 
+**Xeon Deployment Example:**
+To install on Xeon nodes only:
+
+```bash
+make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct DEVICE=xeon
+```
+- This assumes that all your worker nodes use Sapphire Rapids (SPR) or newer Intel Xeon processors.
+- If you have heterogeneous worker nodes, work with your cluster administrator to identify SPR+ nodes and use taint keys, similar to the GPU and HPU deployments above, to set `LLM_TOLERATION` and `SAFETY_TOLERATION` to schedule on valid nodes.
+
 **Simplified Commands (No Tolerations Needed):**
 
 If you have no tainted nodes (all worker nodes have accelerators), you can use simplified commands:
@@ -233,6 +244,10 @@ make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-gu
 
 # CPU deployment
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-guard-3-8b DEVICE=cpu
+
+# Xeon deployment
+make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-guard-3-8b DEVICE=xeon
+
 ```
 
 When prompted, enter your **[Hugging Face Token](https://huggingface.co/settings/tokens)**.
