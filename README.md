@@ -62,7 +62,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 ### Minimum hardware requirements 
 - 1 GPU/HPU with 24GB of VRAM for the LLM, refer to the [chart below](#supported-models)
 - 1 GPU/HPU with 24GB of VRAM for the safety/shield model (optional)
-- Xeon deployments: one worker node with Intel Xeon processors, Sapphire Rapids (SPR) or newer (EMR/GNR), e.g. r7i.8xlarge, m8i.8xlarge
+- Xeon deployments: one worker node with Intel Xeon processors, Sapphire Rapids (SPR) or newer (EMR/GNR)
+  - for example: m8i.8xlarge, m7i.8xlarge, r8i.8xlarge
   - vLLM requires a minimum of 16 vCPUs and 64 GB of RAM to run
 
 ### Minimum software requirements 
