@@ -95,8 +95,8 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | Function    | Model Name                             | Hardware    | AWS
 |-------------|----------------------------------------|-------------|-------------
 | Embedding   | `all-MiniLM-L6-v2`                     | CPU/GPU/HPU |
-| Generation  | `meta-llama/Llama-3.2-3B-Instruct`     | L4/HPU<br>Xeon | g6.2xlarge<br>m8i.8xlarge
-| Generation  | `meta-llama/Llama-3.1-8B-Instruct`     | L4/HPU<br>Xeon | g6.2xlarge<br>m8i.8xlarge
+| Generation  | `meta-llama/Llama-3.2-3B-Instruct`     | L4<br>HPU<br>Xeon | g6.2xlarge<br>N/A<br>m8i.8xlarge
+| Generation  | `meta-llama/Llama-3.1-8B-Instruct`     | L4<br>HPU<br>Xeon | g6.2xlarge<br>N/A<br>m8i.8xlarge
 | Generation  | `meta-llama/Meta-Llama-3-70B-Instruct` | A100 x2/HPU | p4d.24xlarge
 | Safety      | `meta-llama/Llama-Guard-3-8B`          | L4/HPU      | g6.2xlarge
 
