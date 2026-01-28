@@ -40,6 +40,18 @@ spec:
             - name: TAVILY_SEARCH_API_KEY
               value: {{ (index .Values "llama-stack").secrets.TAVILY_SEARCH_API_KEY | quote }}
             {{- end }}
+            {{- if .Values.pgvector }}
+            - name: PGVECTOR_HOST
+              value: {{ .Values.pgvector.secret.host | quote }}
+            - name: PGVECTOR_PORT
+              value: {{ .Values.pgvector.secret.port | quote }}
+            - name: PGVECTOR_USER
+              value: {{ .Values.pgvector.secret.user | quote }}
+            - name: PGVECTOR_PASSWORD
+              value: {{ .Values.pgvector.secret.password | quote }}
+            - name: PGVECTOR_DB
+              value: {{ .Values.pgvector.secret.dbname | quote }}
+            {{- end }}
             {{- if .Values.suggestedQuestions }}
             - name: RAG_QUESTION_SUGGESTIONS
               valueFrom:

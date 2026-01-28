@@ -11,6 +11,22 @@ from io import BytesIO
 # Add the frontend directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../frontend'))
 
+# Mock all external dependencies before any imports from the upload module
+# This is required because @patch decorators try to import the target module
+mock_streamlit = MagicMock()
+mock_streamlit.session_state = {}
+sys.modules['streamlit'] = mock_streamlit
+sys.modules['asyncpg'] = MagicMock()
+sys.modules['pandas'] = MagicMock()
+
+# Mock llama_stack_client with a proper RAGDocument mock
+mock_llama_stack_client = MagicMock()
+def mock_rag_document(**kwargs):
+    """Create a dict-like RAGDocument mock"""
+    return kwargs
+mock_llama_stack_client.RAGDocument = mock_rag_document
+sys.modules['llama_stack_client'] = mock_llama_stack_client
+
 # Configuration
 LLAMA_STACK_ENDPOINT = os.getenv("LLAMA_STACK_ENDPOINT", "http://localhost:8321")
 
