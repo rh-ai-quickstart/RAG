@@ -566,6 +566,7 @@ def tool_chat_page():
 
     def direct_process_prompt(prompt, debug_events_list):
         # Query the vector DB
+        prompt_context = None  # Initialize to avoid UnboundLocalError if RAG query fails
         if selected_vector_dbs:
             vector_dbs = llama_stack_api.client.vector_dbs.list() or []
             vector_db_ids = [vector_db.identifier for vector_db in vector_dbs if get_vector_db_name(vector_db) in selected_vector_dbs]
