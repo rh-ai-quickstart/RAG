@@ -350,17 +350,48 @@ def _upload_documents_to_database(vector_db_name, uploaded_files, vector_db_id=N
         # Insert documents into the existing vector database
         actual_db_id = vector_db_id or vector_db_name
         with st.spinner(f"Uploading documents to '{vector_db_name}'..."):
-            llama_stack_api.client.tool_runtime.rag_tool.insert(
+            response = llama_stack_api.client.tool_runtime.rag_tool.insert(
                 vector_db_id=actual_db_id,  # Use the correct database ID
                 documents=documents,
                 chunk_size_in_tokens=512,
             )
         
-        # Success
-        st.session_state["upload_status"] = "success"
-        st.session_state["upload_message"] = f"Successfully uploaded {len(uploaded_files)} document(s) to '{vector_db_name}'!"
+        # Check for embedded errors in the response
+        # LlamaStack may return HTTP 200 but include error details in the response body
+        has_error = False
+        error_message = None
         
-        # Trigger refresh to show the success message
+        if response is not None:
+            # Check if response is a list (batch insert returns list of file statuses)
+            if isinstance(response, list):
+                for item in response:
+                    # Check for last_error field in each item
+                    if hasattr(item, 'last_error') and item.last_error:
+                        has_error = True
+                        error_message = item.last_error.get('message', str(item.last_error)) if isinstance(item.last_error, dict) else str(item.last_error)
+                        break
+                    # Check for status field indicating failure
+                    if hasattr(item, 'status') and item.status == 'failed':
+                        has_error = True
+                        error_message = getattr(item, 'last_error', {}).get('message', 'Upload failed') if hasattr(item, 'last_error') else 'Upload failed'
+                        break
+            # Check if response is a single object with error info
+            elif hasattr(response, 'last_error') and response.last_error:
+                has_error = True
+                error_message = response.last_error.get('message', str(response.last_error)) if isinstance(response.last_error, dict) else str(response.last_error)
+            elif hasattr(response, 'status') and response.status == 'failed':
+                has_error = True
+                error_message = getattr(response, 'last_error', {}).get('message', 'Upload failed') if hasattr(response, 'last_error') else 'Upload failed'
+        
+        if has_error:
+            st.session_state["upload_status"] = "error"
+            st.session_state["upload_message"] = f"Error uploading documents: {error_message}"
+        else:
+            # Success
+            st.session_state["upload_status"] = "success"
+            st.session_state["upload_message"] = f"Successfully uploaded {len(uploaded_files)} document(s) to '{vector_db_name}'!"
+        
+        # Trigger refresh to show the message
         st.rerun()
         
     except Exception as e:
