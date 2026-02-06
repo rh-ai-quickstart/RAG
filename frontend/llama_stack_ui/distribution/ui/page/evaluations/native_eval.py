@@ -5,7 +5,8 @@ import streamlit as st
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
 
 """
-Native Evaluation page: select a benchmark, configure eval candidate, and run full generation + scoring.
+Native Evaluation page: select a benchmark, configure eval candidate,
+and run full generation + scoring.
 """
 
 def select_benchmark_1():
@@ -48,7 +49,8 @@ def define_eval_candidate_2():
 
     st.subheader("2. Define Eval Candidate")
     st.info(
-        "Define generation configuration: choose 'model' for inference API or 'agent' for agent API."
+        "Define generation configuration: choose 'model' for inference API "
+        "or 'agent' for agent API."
     )
 
     with st.expander("Define Eval Candidate", expanded=True):

@@ -22,5 +22,8 @@ def scoring_functions():
     scoring_functions_info = {s.identifier: s.to_dict() for s in sf_list}
 
     # Let user select and view a scoring function
-    selected_scoring_function = st.selectbox("Select a scoring function", list(scoring_functions_info.keys()))
+    selected_scoring_function = st.selectbox(
+        "Select a scoring function",
+        list(scoring_functions_info.keys()),
+    )
     st.json(scoring_functions_info[selected_scoring_function], expanded=True)

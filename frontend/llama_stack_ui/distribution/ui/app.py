@@ -15,7 +15,7 @@ def main():
 
     # Build navigation items dynamically
     nav_items = [
-        st.Page(path, title=name, icon=icon, default=(name == "Chat"))
+        st.Page(path, title=name, icon=icon, default=name == "Chat")
         for name, (path, icon) in pages.items()
     ]
     # Render navigation
@@ -25,4 +25,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -14,7 +14,7 @@ class LlamaStackApi:
         # Timeout of 600 seconds (10 minutes) for large document uploads
         # Default is 60 seconds which is too short for large PDFs
         timeout = float(os.environ.get("LLAMA_STACK_TIMEOUT", "600"))
-        
+
         self.client = LlamaStackClient(
             base_url=os.environ.get("LLAMA_STACK_ENDPOINT", "http://localhost:8321"),
             timeout=timeout,
