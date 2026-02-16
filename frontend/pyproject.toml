@@ -10,11 +10,12 @@ requires-python = ">=3.12"
 dependencies = [
     "streamlit",
     "pandas",
-    "llama-stack-client==0.2.23",
+	"llama-stack-client==0.3.5",
     "requests",
     "streamlit-option-menu",
-    "llama-stack==0.2.23",
+    "llama-stack==0.3.5",
     "fire",
+    "asyncpg",
 ]
 
 [tool.setuptools]

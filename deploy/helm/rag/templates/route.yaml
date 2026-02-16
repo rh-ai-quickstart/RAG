@@ -4,6 +4,9 @@ metadata:
   name: {{ include "rag.fullname" . }}
   labels:
     {{- include "rag.labels" . | nindent 4 }}
+  annotations:
+    # 10 minute timeout for large document uploads
+    haproxy.router.openshift.io/timeout: 600s
 spec:
   to:
     kind: Service

@@ -29,6 +29,3 @@ def providers():
     for api_name, providers in api_to_providers.items():
         st.markdown(f"###### {api_name}")
         st.dataframe([p.to_dict() for p in providers], width=500)
-
-
-

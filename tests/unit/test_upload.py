@@ -2,217 +2,323 @@
 Unit tests for the upload module
 Tests document upload and vector DB creation logic
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import sys
+import asyncio
 import os
+import sys
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
 
 # Add the frontend directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../frontend'))
 
-# Mock streamlit before importing
-sys.modules['streamlit'] = MagicMock()
+# Mock all external dependencies before any imports from the upload module
+# This is required because @patch decorators try to import the target module
+mock_streamlit = MagicMock()
+mock_streamlit.session_state = {}
+sys.modules['streamlit'] = mock_streamlit
+sys.modules['asyncpg'] = MagicMock()
+sys.modules['pandas'] = MagicMock()
+
+# Mock llama_stack_client with a proper RAGDocument mock
+mock_llama_stack_client = MagicMock()
+def mock_rag_document(**kwargs):
+    """Create a dict-like RAGDocument mock"""
+    return kwargs
+mock_llama_stack_client.RAGDocument = mock_rag_document
+sys.modules['llama_stack_client'] = mock_llama_stack_client
+
+# Now we can safely import modules that will be patched
+# Pre-import the modules so @patch can find them
+from llama_stack_ui.distribution.ui.modules import api, utils
+from llama_stack_ui.distribution.ui.page.upload import upload as upload_module
 
 
-class TestVectorDBConfiguration:
-    """Test vector database configuration and setup"""
+class MockAsyncContextManager:
+    """Mock async context manager for pool.acquire()"""
+    def __init__(self, conn):
+        self.conn = conn
     
-    def test_vector_db_default_name(self):
-        """Test default vector database name"""
-        default_name = "rag_vector_db"
-        assert default_name == "rag_vector_db"
-        assert len(default_name) > 0
+    async def __aenter__(self):
+        return self.conn
     
-    def test_vector_db_embedding_dimension(self):
-        """Test that embedding dimension is set correctly for all-MiniLM-L6-v2"""
-        embedding_dimension = 384
-        embedding_model = "all-MiniLM-L6-v2"
-        
-        assert embedding_dimension == 384
-        assert embedding_model == "all-MiniLM-L6-v2"
-    
-    def test_chunk_size_configuration(self):
-        """Test that chunk size is set to 512 tokens"""
-        chunk_size = 512
-        assert chunk_size == 512
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return None
 
 
-class TestDocumentProcessing:
-    """Test document processing and RAGDocument creation"""
+def create_mock_pool_with_connection(mock_conn):
+    """
+    Helper to create a mock connection pool that yields the given connection.
     
-    def test_supported_file_types(self):
-        """Test that supported file types are correctly defined"""
-        supported_types = ["txt", "pdf", "doc", "docx"]
+    Args:
+        mock_conn: The mock connection to return from pool.acquire()
         
-        assert "txt" in supported_types
-        assert "pdf" in supported_types
-        assert "doc" in supported_types
-        assert "docx" in supported_types
-    
-    def test_document_id_from_filename(self):
-        """Test that document ID is created from filename"""
-        filename = "test_document.pdf"
-        document_id = filename
-        
-        assert document_id == "test_document.pdf"
-        assert document_id.endswith(".pdf")
-    
-    @patch('llama_stack_ui.distribution.ui.modules.utils.data_url_from_file')
-    def test_rag_document_creation(self, mock_data_url):
-        """Test RAGDocument creation from uploaded file"""
-        from llama_stack_client import RAGDocument
-        
-        # Mock file and data URL
-        mock_data_url.return_value = "data:text/plain;base64,SGVsbG8gV29ybGQ="
-        
-        mock_file = Mock()
-        mock_file.name = "test.txt"
-        
-        # Create RAGDocument as done in upload.py
-        document = RAGDocument(
-            document_id=mock_file.name,
-            content=mock_data_url(mock_file),
-        )
-        
-        # RAGDocument returns a dict-like object
-        assert document['document_id'] == "test.txt"
-        assert document['content'].startswith("data:")
-        mock_data_url.assert_called_once()
-    
-    def test_multiple_documents_processing(self):
-        """Test processing multiple uploaded files"""
-        # Simulate multiple uploaded files
-        mock_file1 = Mock()
-        mock_file1.name = "doc1.txt"
-        mock_file2 = Mock()
-        mock_file2.name = "doc2.pdf"
-        mock_file3 = Mock()
-        mock_file3.name = "doc3.docx"
-        
-        uploaded_files = [mock_file1, mock_file2, mock_file3]
-        
-        # Simulate creating document list
-        document_ids = [f.name for f in uploaded_files]
-        
-        assert len(document_ids) == 3
-        assert "doc1.txt" in document_ids
-        assert "doc2.pdf" in document_ids
-        assert "doc3.docx" in document_ids
+    Returns:
+        MagicMock: A mock pool with proper acquire() context manager
+    """
+    mock_pool = MagicMock()
+    mock_pool.acquire.return_value = MockAsyncContextManager(mock_conn)
+    return mock_pool
 
 
-class TestVectorDBOperations:
-    """Test vector database operations"""
+class TestGetDocumentsFromPgvector:
+    """Unit tests for _get_documents_from_pgvector function"""
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
-    def test_vector_db_registration_params(self, mock_api):
-        """Test that vector DB registration uses correct parameters"""
-        mock_client = Mock()
-        mock_api.client = mock_client
-        
-        vector_db_id = "test_vector_db"
-        embedding_dimension = 384
-        embedding_model = "all-MiniLM-L6-v2"
-        provider_id = "pgvector"
-        
-        # Simulate registration call
-        mock_client.vector_dbs.register(
-            vector_db_id=vector_db_id,
-            embedding_dimension=embedding_dimension,
-            embedding_model=embedding_model,
-            provider_id=provider_id,
-        )
-        
-        # Verify the call was made with correct params
-        mock_client.vector_dbs.register.assert_called_once_with(
-            vector_db_id=vector_db_id,
-            embedding_dimension=embedding_dimension,
-            embedding_model=embedding_model,
-            provider_id=provider_id,
-        )
-    
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
-    def test_document_insertion_params(self, mock_api):
-        """Test that document insertion uses correct parameters"""
-        from llama_stack_client import RAGDocument
-        
-        mock_client = Mock()
-        mock_api.client = mock_client
-        
-        vector_db_id = "test_vector_db"
-        documents = [
-            RAGDocument(document_id="doc1", content="content1"),
-            RAGDocument(document_id="doc2", content="content2"),
+    def test_get_documents_success(self):
+        """Test successful retrieval of documents from pgvector"""
+        # Setup mock connection
+        mock_conn = AsyncMock()
+        mock_rows = [
+            {'document_id': 'document1.pdf'},
+            {'document_id': 'document2.txt'},
+            {'document_id': 'document3.docx'},
         ]
-        chunk_size = 512
+        mock_conn.fetch = AsyncMock(return_value=mock_rows)
         
-        # Simulate insertion call
-        mock_client.tool_runtime.rag_tool.insert(
-            vector_db_id=vector_db_id,
-            documents=documents,
-            chunk_size_in_tokens=chunk_size,
-        )
+        # Create mock pool
+        mock_pool = create_mock_pool_with_connection(mock_conn)
         
-        # Verify the call was made
-        mock_client.tool_runtime.rag_tool.insert.assert_called_once()
-        call_args = mock_client.tool_runtime.rag_tool.insert.call_args
-        assert call_args[1]['vector_db_id'] == vector_db_id
-        assert call_args[1]['chunk_size_in_tokens'] == chunk_size
-        assert len(call_args[1]['documents']) == 2
+        # Patch _get_pg_pool to return our mock pool
+        async def mock_get_pool():
+            return mock_pool
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            # Call the actual function
+            result = upload_module._get_documents_from_pgvector("my-test-db")
+            
+            # Verify the result
+            assert result == ['document1.pdf', 'document2.txt', 'document3.docx']
+            
+            # Verify acquire was called (connection borrowed from pool)
+            mock_pool.acquire.assert_called_once()
     
-    @patch('llama_stack_ui.distribution.ui.modules.api.llama_stack_api')
-    def test_provider_detection(self, mock_api):
-        """Test vector IO provider detection"""
-        mock_client = Mock()
+    def test_get_documents_empty_result(self):
+        """Test that empty results return None"""
+        # Setup mock connection with empty result
+        mock_conn = AsyncMock()
+        mock_conn.fetch = AsyncMock(return_value=[])
+        
+        mock_pool = create_mock_pool_with_connection(mock_conn)
+        
+        async def mock_get_pool():
+            return mock_pool
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            result = upload_module._get_documents_from_pgvector("empty-db")
+            
+            # Empty result should return None
+            assert result is None
+    
+    def test_get_documents_connection_error(self):
+        """Test that connection errors return None"""
+        # Setup mock pool that raises an exception on acquire
+        async def mock_get_pool():
+            raise Exception("Connection refused")
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            result = upload_module._get_documents_from_pgvector("error-db")
+            
+            # Error should return None
+            assert result is None
+    
+    def test_get_documents_filters_null_ids(self):
+        """Test that null document IDs are filtered out"""
+        mock_conn = AsyncMock()
+        mock_rows = [
+            {'document_id': 'valid1.pdf'},
+            {'document_id': None},  # Should be filtered
+            {'document_id': 'valid2.txt'},
+            {'document_id': None},  # Should be filtered
+        ]
+        mock_conn.fetch = AsyncMock(return_value=mock_rows)
+        
+        mock_pool = create_mock_pool_with_connection(mock_conn)
+        
+        async def mock_get_pool():
+            return mock_pool
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            result = upload_module._get_documents_from_pgvector("mixed-db")
+            
+            # Only valid IDs should be returned
+            assert result == ['valid1.pdf', 'valid2.txt']
+            assert len(result) == 2
+
+
+class TestDeleteDocumentFromPgvector:
+    """Unit tests for _delete_document_from_pgvector function"""
+    
+    def test_delete_document_success(self):
+        """Test successful deletion of document from pgvector"""
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(return_value="DELETE 5")
+        
+        mock_pool = create_mock_pool_with_connection(mock_conn)
+        
+        async def mock_get_pool():
+            return mock_pool
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            success, count, error = upload_module._delete_document_from_pgvector(
+                "my-test-db", 
+                "document.pdf"
+            )
+            
+            assert success is True
+            assert count == 5
+            assert error is None
+            mock_pool.acquire.assert_called_once()
+    
+    def test_delete_document_not_found(self):
+        """Test deletion when document doesn't exist"""
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(return_value="DELETE 0")
+        
+        mock_pool = create_mock_pool_with_connection(mock_conn)
+        
+        async def mock_get_pool():
+            return mock_pool
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            success, count, error = upload_module._delete_document_from_pgvector(
+                "my-test-db", 
+                "nonexistent.pdf"
+            )
+            
+            assert success is True
+            assert count == 0
+            assert error is None
+    
+    def test_delete_document_connection_error(self):
+        """Test deletion with connection error"""
+        async def mock_get_pool():
+            raise Exception("Connection refused")
+        
+        with patch.object(upload_module, '_get_pg_pool', mock_get_pool):
+            success, count, error = upload_module._delete_document_from_pgvector(
+                "my-test-db", 
+                "document.pdf"
+            )
+            
+            assert success is False
+            assert count == 0
+            assert error is not None
+            assert "Connection refused" in str(error)
+
+
+class TestCreateVectorDatabase:
+    """Unit tests for _create_vector_database function"""
+    
+    def test_create_vector_database_success(self):
+        """Test successful creation of vector database"""
+        # Mock the API client
+        mock_client = MagicMock()
+        mock_client.vector_dbs.list.return_value = []
+        mock_client.providers.list.return_value = [
+            MagicMock(api="vector_io", provider_id="pgvector")
+        ]
+        mock_client.vector_dbs.register.return_value = MagicMock()
+        
+        mock_api = MagicMock()
         mock_api.client = mock_client
         
-        # Mock provider list
-        mock_providers = [
-            Mock(api="inference", provider_id="ollama"),
-            Mock(api="vector_io", provider_id="pgvector"),
-            Mock(api="memory", provider_id="redis"),
+        # Mock session state
+        mock_st = MagicMock()
+        mock_st.session_state = {}
+        
+        with patch.object(upload_module, 'llama_stack_api', mock_api):
+            with patch.object(upload_module, 'st', mock_st):
+                upload_module._create_vector_database("new-test-db")
+                
+                # Verify registration was called with correct parameters
+                mock_client.vector_dbs.register.assert_called_once()
+                call_kwargs = mock_client.vector_dbs.register.call_args[1]
+                assert call_kwargs['vector_db_id'] == "new-test-db"
+                assert call_kwargs['embedding_model'] == "all-MiniLM-L6-v2"
+                assert call_kwargs['embedding_dimension'] == 384
+                assert call_kwargs['provider_id'] == "pgvector"
+    
+    def test_create_vector_database_duplicate_name(self):
+        """Test that duplicate names are rejected"""
+        # Mock existing database with same name
+        existing_db = MagicMock()
+        existing_db.identifier = "existing-db"
+        
+        mock_client = MagicMock()
+        mock_client.vector_dbs.list.return_value = [existing_db]
+        
+        mock_api = MagicMock()
+        mock_api.client = mock_client
+        
+        mock_st = MagicMock()
+        mock_st.session_state = {}
+        
+        with patch.object(upload_module, 'llama_stack_api', mock_api):
+            with patch.object(upload_module, 'st', mock_st):
+                upload_module._create_vector_database("existing-db")
+                
+                # Registration should NOT be called for duplicates
+                mock_client.vector_dbs.register.assert_not_called()
+                
+                # Error status should be set
+                assert mock_st.session_state.get("creation_status") == "error"
+    
+    def test_create_vector_database_no_provider(self):
+        """Test error when no vector_io provider exists"""
+        mock_client = MagicMock()
+        mock_client.vector_dbs.list.return_value = []
+        mock_client.providers.list.return_value = [
+            MagicMock(api="inference", provider_id="ollama")  # No vector_io
         ]
-        mock_client.providers.list.return_value = mock_providers
         
-        # Simulate provider detection logic
-        providers = mock_client.providers.list()
-        vector_io_provider = None
-        for x in providers:
-            if x.api == "vector_io":
-                vector_io_provider = x.provider_id
+        mock_api = MagicMock()
+        mock_api.client = mock_client
         
-        assert vector_io_provider == "pgvector"
+        mock_st = MagicMock()
+        mock_st.session_state = {}
+        
+        with patch.object(upload_module, 'llama_stack_api', mock_api):
+            with patch.object(upload_module, 'st', mock_st):
+                upload_module._create_vector_database("new-db")
+                
+                # Registration should NOT be called without provider
+                mock_client.vector_dbs.register.assert_not_called()
+                
+                # Error status should be set
+                assert mock_st.session_state.get("creation_status") == "error"
 
 
-class TestUploadValidation:
-    """Test upload validation and error handling"""
+class TestConnectionPool:
+    """Unit tests for the connection pool functionality"""
     
-    def test_empty_upload_list(self):
-        """Test handling of empty upload list"""
-        uploaded_files = []
-        assert len(uploaded_files) == 0
-    
-    def test_upload_count_display(self):
-        """Test upload count display logic"""
-        uploaded_files = [Mock(), Mock(), Mock()]
-        count = len(uploaded_files)
-        message = f"Successfully uploaded {count} files"
+    def test_pool_is_reused(self):
+        """Test that the same pool is returned on subsequent calls"""
+        # Reset the global pool
+        upload_module._pg_pool = None
         
-        assert message == "Successfully uploaded 3 files"
-        assert str(count) in message
-    
-    def test_vector_db_name_validation(self):
-        """Test vector database name validation"""
-        # Valid names
-        valid_names = ["rag_vector_db", "test-db-123", "my_documents"]
-        for name in valid_names:
-            assert len(name) > 0
-            assert name.replace('_', '').replace('-', '').isalnum()
+        mock_pool = AsyncMock()
         
-        # Invalid names should be caught
-        invalid_name = ""
-        assert len(invalid_name) == 0
+        # Mock asyncpg.create_pool
+        async def mock_create_pool(**kwargs):
+            return mock_pool
+        
+        with patch.object(upload_module.asyncpg, 'create_pool', mock_create_pool):
+            # Get pool twice
+            async def get_pools():
+                pool1 = await upload_module._get_pg_pool()
+                pool2 = await upload_module._get_pg_pool()
+                return pool1, pool2
+            
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            pool1, pool2 = loop.run_until_complete(get_pools())
+            
+            # Should be the same pool instance
+            assert pool1 is pool2
+        
+        # Clean up
+        upload_module._pg_pool = None
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

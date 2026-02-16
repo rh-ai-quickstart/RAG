@@ -85,8 +85,12 @@ def application_evaluation_page():
                         )
                         new_params[param_name] = value
                     else:
+                        label = (
+                            f"Enter value for **{param_name}** in "
+                            f"{scoring_fn_id} in valid JSON format"
+                        )
                         value = st.text_area(
-                            f"Enter value for **{param_name}** in {scoring_fn_id} in valid JSON format",
+                            label,
                             value=json.dumps(param_value, indent=2),
                             height=80,
                         )

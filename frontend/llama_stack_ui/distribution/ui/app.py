@@ -3,9 +3,17 @@
 #
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
+import logging
+
 import streamlit as st
 
+
 def main():
+    # Configure logging to show DEBUG messages by default
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(levelname)s] %(name)s: %(message)s'
+    )
     # Define available pages: path and icon
     pages = {
         "Chat": ("page/playground/chat.py", "💬"),
@@ -15,7 +23,7 @@ def main():
 
     # Build navigation items dynamically
     nav_items = [
-        st.Page(path, title=name, icon=icon, default=(name == "Chat"))
+        st.Page(path, title=name, icon=icon, default=name == "Chat")
         for name, (path, icon) in pages.items()
     ]
     # Render navigation
@@ -25,4 +33,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

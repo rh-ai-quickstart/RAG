@@ -629,17 +629,23 @@ jobs:
             deployment/llamastack -n rag-e2e-ui
           kubectl wait --for=condition=available --timeout=300s \
             deployment/rag -n rag-e2e-ui
+          
+          echo "Waiting for pods to be ready..."
+          kubectl wait --for=condition=ready --timeout=600s \
+            pod -l app.kubernetes.io/name=llamastack -n rag-e2e-ui
+          kubectl wait --for=condition=ready --timeout=300s \
+            pod -l app.kubernetes.io/name=rag -n rag-e2e-ui
+          
+          echo "✅ All pods are ready"
+          kubectl get pods -n rag-e2e-ui
 
       - name: Expose services via NodePort
         run: |
           kubectl patch service rag -n rag-e2e-ui -p '{"spec":{"type":"NodePort","ports":[{"port":8501,"nodePort":30080}]}}'
           kubectl patch service llamastack -n rag-e2e-ui -p '{"spec":{"type":"NodePort","ports":[{"port":8321,"nodePort":30081}]}}'
-
-      - name: Port forward services
-        run: |
-          kubectl port-forward -n rag-e2e-ui svc/rag 8501:8501 &
-          kubectl port-forward -n rag-e2e-ui svc/llamastack 8321:8321 &
-          sleep 10
+          
+          # Verify services
+          kubectl get services -n rag-e2e-ui
 
       - name: Run UI E2E tests with Playwright
         env:
@@ -649,10 +655,74 @@ jobs:
           MAAS_MODEL_ID: ${{ env.MAAS_MODEL_ID }}
           SKIP_MODEL_TESTS: "false"  # Enable MaaS inference tests in UI
         run: |
+          echo "Starting port forwarding and running tests..."
+          
+          # Start port forwarding in background and keep them running
+          echo "Starting port forwarding for RAG UI..."
+          kubectl port-forward -n rag-e2e-ui svc/rag 8501:8501 > /tmp/rag-portforward.log 2>&1 &
+          RAG_PF_PID=$!
+          echo "RAG port-forward PID: $RAG_PF_PID"
+          
+          echo "Starting port forwarding for LlamaStack..."
+          kubectl port-forward -n rag-e2e-ui svc/llamastack 8321:8321 > /tmp/llamastack-portforward.log 2>&1 &
+          LLAMASTACK_PF_PID=$!
+          echo "LlamaStack port-forward PID: $LLAMASTACK_PF_PID"
+          
+          # Function to check if port forwarding is working
+          check_port_forwarding() {
+            (timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/8501' 2>/dev/null) && \
+            (timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/8321' 2>/dev/null)
+          }
+          
+          # Function to verify processes are alive
+          check_processes() {
+            kill -0 $RAG_PF_PID 2>/dev/null && kill -0 $LLAMASTACK_PF_PID 2>/dev/null
+          }
+          
+          # Wait for port forwarding to establish
+          echo "Waiting for port forwarding to be ready..."
+          for i in {1..30}; do
+            if check_port_forwarding && check_processes; then
+              echo "✅ Port forwarding is working! (attempt $i)"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Port forwarding failed to establish after 30 attempts"
+              echo "RAG port-forward log:"
+              cat /tmp/rag-portforward.log || true
+              echo "LlamaStack port-forward log:"
+              cat /tmp/llamastack-portforward.log || true
+              echo "Checking port-forward processes:"
+              ps aux | grep "kubectl port-forward" || true
+              echo "Checking if ports are listening:"
+              ss -tlnp | grep -E ':(8501|8321)' || netstat -tlnp 2>/dev/null | grep -E ':(8501|8321)' || true
+              exit 1
+            fi
+            echo "Waiting for port forwarding... (attempt $i/30)"
+            sleep 2
+          done
+          
+          # Set up cleanup trap to kill port forwarding on exit
+          trap "echo 'Cleaning up port forwarding...'; kill $RAG_PF_PID $LLAMASTACK_PF_PID 2>/dev/null || true" EXIT
+          
           echo "Running UI E2E tests with MaaS integration..."
           echo "MaaS Endpoint: ${MAAS_ENDPOINT}"
           echo "MaaS Model ID: ${MAAS_MODEL_ID}"
-          pytest tests/e2e_ui/ -v --tb=short --browser chromium
+          
+          # Run tests
+          pytest tests/e2e_ui/ -v --tb=short --browser chromium || TEST_EXIT_CODE=$?
+          
+          # Verify port forwarding was still working after tests
+          if ! check_port_forwarding; then
+            echo "⚠️  Warning: Port forwarding stopped working during tests"
+            echo "RAG port-forward log:"
+            cat /tmp/rag-portforward.log || true
+            echo "LlamaStack port-forward log:"
+            cat /tmp/llamastack-portforward.log || true
+          fi
+          
+          # Exit with test result
+          exit ${TEST_EXIT_CODE:-0}
 
       - name: Upload Playwright test results
         if: always()

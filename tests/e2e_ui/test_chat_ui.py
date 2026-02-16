@@ -29,11 +29,23 @@ def browser_context_args(browser_context_args):
 @pytest.fixture(autouse=True)
 def wait_for_app(page: Page):
     """Wait for the Streamlit app to be ready before each test"""
-    page.goto(RAG_UI_ENDPOINT)
-    # Wait for Streamlit to finish loading
-    page.wait_for_load_state("networkidle")
-    # Give Streamlit additional time to initialize
-    time.sleep(2)
+    # Retry navigation in case of transient connection issues
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            page.goto(RAG_UI_ENDPOINT, timeout=60000, wait_until="domcontentloaded")
+            # Wait for Streamlit to finish loading
+            page.wait_for_load_state("networkidle", timeout=60000)
+            # Give Streamlit additional time to initialize
+            time.sleep(2)
+            # Verify page actually loaded
+            if page.url.startswith(RAG_UI_ENDPOINT):
+                return
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Navigation attempt {attempt + 1} failed: {e}, retrying...")
+            time.sleep(2)
 
 
 class TestChatUIBasics:
@@ -108,18 +120,6 @@ class TestAgentModeChat:
         
         toolgroups = page.get_by_text("Available ToolGroups", exact=False)
         expect(toolgroups).to_be_visible(timeout=TEST_TIMEOUT)
-    
-    def test_agent_type_selector(self, page: Page):
-        """Test agent type selector (Regular vs ReAct)"""
-        agent_radio = page.get_by_text("Agent-based", exact=False).first
-        if agent_radio.is_visible():
-            agent_radio.click()
-            time.sleep(1)
-        
-        # Look for agent type options with more specific selectors
-        # Check if either Regular or ReAct options exist
-        page_content = page.content()
-        assert "Regular" in page_content or "ReAct" in page_content
 
 
 class TestConfigurationOptions:

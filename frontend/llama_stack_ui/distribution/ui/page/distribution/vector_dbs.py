@@ -4,10 +4,10 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from llama_stack_ui.distribution.ui.modules.utils import get_vector_db_name
 import streamlit as st
 
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
+from llama_stack_ui.distribution.ui.modules.utils import get_vector_db_name
 
 
 def vector_dbs():
@@ -16,7 +16,7 @@ def vector_dbs():
     """
     st.header("Vector Databases")
     # Fetch all vector databases
-    vdb_list = llama_stack_api.client.vector_dbs.list()
+    vdb_list = llama_stack_api.client.vector_stores.list()
     if not vdb_list:
         st.info("No vector databases found.")
         return

@@ -267,7 +267,7 @@ Watch for all pods to reach Running or Completed status. Key pods to watch inclu
 oc get pods -l component=predictor
 ```
 
-Look for **3/3** under the Ready column.
+Look for **2/2** (or **3/3** when RAW_DEPLOYMENT=false) under the Ready column.
 
 8. **Verify Installation**
 

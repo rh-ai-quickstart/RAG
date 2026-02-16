@@ -85,10 +85,24 @@ endef
 # Helper function to validate values file
 define validate_values_file
 	echo -e "$(BLUE)[INFO]$(NC) Validating configuration values..."; \
-	HF_TOKEN=$$(grep -A 2 "^llm-service:" "$(VALUES_FILE)" | grep "hf_token:" | sed 's/.*hf_token: *//' | tr -d '"' | tr -d ' '); \
-	LLAMA_STACK_TAVILY=$$(grep "TAVILY_SEARCH_API_KEY:" "$(VALUES_FILE)" 2>/dev/null | sed 's/.*TAVILY_SEARCH_API_KEY: *//' | tr -d '"' | tr -d ' '); \
 	UPDATED=0; \
-	if [ -z "$$HF_TOKEN" ] || [ "$$HF_TOKEN" = "" ]; then \
+	\
+	if [ -n "$$HF_TOKEN" ]; then \
+		echo -e "$(GREEN)[SUCCESS]$(NC) Using HF_TOKEN from environment variable."; \
+		sed -i.bak "/^llm-service:/,/^[^ ]/ s|hf_token:.*|hf_token: \"$$HF_TOKEN\"|" "$(VALUES_FILE)"; \
+		UPDATED=1; \
+	fi; \
+	\
+	if [ -n "$$TAVILY_API_KEY" ]; then \
+		echo -e "$(GREEN)[SUCCESS]$(NC) Using TAVILY_API_KEY from environment variable."; \
+		sed -i.bak "s/TAVILY_SEARCH_API_KEY:.*/TAVILY_SEARCH_API_KEY: \"$$TAVILY_API_KEY\"/" "$(VALUES_FILE)"; \
+		UPDATED=1; \
+	fi; \
+	\
+	HF_TOKEN_FILE=$$(grep -A 2 "^llm-service:" "$(VALUES_FILE)" | grep "hf_token:" | sed 's/.*hf_token: *//' | tr -d '"' | tr -d ' '); \
+	LLAMA_STACK_TAVILY=$$(grep "TAVILY_SEARCH_API_KEY:" "$(VALUES_FILE)" 2>/dev/null | sed 's/.*TAVILY_SEARCH_API_KEY: *//' | tr -d '"' | tr -d ' '); \
+	\
+	if [ -z "$$HF_TOKEN_FILE" ] || [ "$$HF_TOKEN_FILE" = "" ]; then \
 		echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Model downloads may fail."; \
 		echo -e "$(BLUE)[INFO]$(NC) Get your token from: https://huggingface.co/settings/tokens"; \
 		echo -e ""; \
@@ -102,6 +116,7 @@ define validate_values_file
 		fi; \
 		echo -e ""; \
 	fi; \
+	\
 	if [ -z "$$LLAMA_STACK_TAVILY" ] || [ "$$LLAMA_STACK_TAVILY" = "Paste-your-key-here" ]; then \
 		echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Web search will be disabled."; \
 		echo -e "$(BLUE)[INFO]$(NC) Get your key from: https://tavily.com/"; \
@@ -116,6 +131,7 @@ define validate_values_file
 		fi; \
 		echo -e ""; \
 	fi; \
+	\
 	if [ $$UPDATED -eq 1 ]; then \
 		echo -e "$(GREEN)[SUCCESS]$(NC) Configuration updated. Proceeding with installation..."; \
 		echo -e ""; \
@@ -312,7 +328,7 @@ show-config: ## Show configuration file contents
 # Create namespace and deploy
 namespace:
 	@echo -e "$(BLUE)[INFO]$(NC) Creating namespace $(NAMESPACE)..."
-	@oc create namespace $(NAMESPACE) &> /dev/null && oc label namespace $(NAMESPACE) modelmesh-enabled=false ||:
+	@oc new-project $(NAMESPACE) &> /dev/null && oc label namespace $(NAMESPACE) modelmesh-enabled=false &> /dev/null ||:
 	@oc project $(NAMESPACE) &> /dev/null ||:
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Namespace $(NAMESPACE) is ready"
 
@@ -479,11 +495,11 @@ install: ## Install the RAG deployment
 		fi; \
 		if [ -n "$(LLM_URL)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM URL: $(LLM_URL)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url='$(LLM_URL)'"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url=$(LLM_URL)"; \
 		fi; \
 		if [ -n "$(LLM_API_TOKEN)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM API token"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).apiToken='$(LLM_API_TOKEN)'"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).apiToken=$(LLM_API_TOKEN)"; \
 		fi; \
 	fi; \
 	if [ -n "$(SAFETY)" ]; then \
