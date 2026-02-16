@@ -7,6 +7,7 @@
 import base64
 import json
 import os
+import re
 
 import pandas as pd
 import streamlit as st
@@ -55,6 +56,11 @@ def data_url_from_file(file) -> str:
     data_url = f"data:{mime_type};base64,{base64_content}"
 
     return data_url
+
+
+def clean_text(text):
+    """Collapse consecutive whitespace into a single space."""
+    return re.sub(r'\s+', ' ', text).strip()
 
 
 def get_vector_db_name(vector_db):

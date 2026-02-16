@@ -13,7 +13,7 @@ import logging
 import streamlit as st
 
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
-from llama_stack_ui.distribution.ui.modules.utils import get_vector_db_name
+from llama_stack_ui.distribution.ui.modules.utils import clean_text, get_vector_db_name
 
 
 logger = logging.getLogger(__name__)
@@ -131,14 +131,20 @@ def handle_agent_output_item_done(chunk, state):
     if item_type == "file_search_call":
         # File search results
         if hasattr(item, 'results') and item.results:
+            display_results = []
+            for r in item.results:
+                text = getattr(r, 'text', '')
+                attrs = getattr(r, 'attributes', {})
+                source = attrs.get('source') or getattr(r, 'filename', 'unknown')
+                display_results.append({"source": source, "text": clean_text(text)})
             state.tool_results.append({
                 'title': '📄 File Search Results',
                 'type': 'json',
-                'content': item.results
+                'content': display_results
             })
             with state.containers.tool_results:
                 with st.expander("📄 File Search Results", expanded=False):
-                    st.json(item.results)
+                    st.json(display_results)
 
     elif item_type == "web_search_call":
         # Web search - API doesn't expose raw results, just status

@@ -14,7 +14,7 @@ import traceback
 import streamlit as st
 
 from llama_stack_ui.distribution.ui.modules.api import llama_stack_api
-from llama_stack_ui.distribution.ui.modules.utils import get_vector_db_name
+from llama_stack_ui.distribution.ui.modules.utils import clean_text, get_vector_db_name
 
 
 logger = logging.getLogger(__name__)
@@ -25,31 +25,35 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 def extract_text_from_search_result(result):
-    """Extract text content from a search result object."""
+    """Extract and clean text content from a search result object."""
+    text = None
+
     # Handle Data objects with content list
     if hasattr(result, 'content') and isinstance(result.content, list):
         for content_item in result.content:
             if hasattr(content_item, 'text'):
-                return content_item.text
-        return None
+                text = content_item.text
+                break
 
     # Handle simple content attribute
-    if hasattr(result, 'content') and isinstance(result.content, str):
-        return result.content
+    elif hasattr(result, 'content') and isinstance(result.content, str):
+        text = result.content
 
     # Handle dict format
-    if isinstance(result, dict) and 'content' in result:
+    elif isinstance(result, dict) and 'content' in result:
         if isinstance(result['content'], list) and result['content']:
-            return result['content'][0].get('text', '')
-        return result['content']
+            text = result['content'][0].get('text', '')
+        else:
+            text = result['content']
 
-    return None
+    return clean_text(text) if text else None
 
 
 def search_vector_store_direct(prompt, vector_db_id, vector_db_name, state):
     """Search vector store and extract context for Direct mode."""
     search_results = []
     context_parts = []
+    display_results = []
 
     # Show search status
     with state.containers.tool_status:
@@ -75,15 +79,18 @@ def search_vector_store_direct(prompt, vector_db_id, vector_db_name, state):
 
     # Display and process search results
     if search_results:
-        with state.containers.tool_results:
-            with st.expander(f"📄 Search Results from '{vector_db_name}'", expanded=False):
-                st.json(search_results)
-
-        # Build context from search results
-        for idx, result in enumerate(search_results[:5], 1):  # Top 5 results
+        # Build context and display data from search results
+        for result in search_results:
             text_content = extract_text_from_search_result(result)
             if text_content:
-                context_parts.append(f"[Document {idx}]: {text_content}")
+                attrs = getattr(result, 'attributes', {})
+                source = attrs.get('source') or getattr(result, 'filename', 'unknown')
+                context_parts.append(f"[Source: {source}]: {text_content}")
+                display_results.append({"source": source, "text": text_content})
+
+        with state.containers.tool_results:
+            with st.expander(f"📄 Search Results from '{vector_db_name}'", expanded=False):
+                st.json(display_results)
 
         logger.debug("Built context with %s documents", len(context_parts))
     else:
@@ -91,7 +98,7 @@ def search_vector_store_direct(prompt, vector_db_id, vector_db_name, state):
         with state.containers.tool_results:
             st.info(f"No results found in '{vector_db_name}'")
 
-    return search_results, context_parts
+    return search_results, context_parts, display_results
 
 
 def build_rag_messages(prompt, context_parts, system_prompt):
@@ -156,15 +163,15 @@ def save_direct_response_to_session(state, all_search_results):
 
     # Save search results for history display if we had any
     if all_search_results:
+        db_names = [name for name, _ in all_search_results]
         response_dict["tool_results"] = [
             {
                 'title': f'📄 Search Results from \'{name}\'',
                 'type': 'json',
-                'content': results
+                'content': display
             }
-            for name, results in all_search_results
+            for name, display in all_search_results
         ]
-        db_names = [name for name, _ in all_search_results]
         response_dict["tool_status"] = (
             f"🛠 :grey[_Searched vector stores: {', '.join(db_names)}_]"
         )
@@ -190,11 +197,11 @@ def direct_process_prompt(prompt, state, config):
         for vector_db in vector_dbs:
             vector_db_id = vector_db.id
             vector_db_name = get_vector_db_name(vector_db)
-            search_results, parts = search_vector_store_direct(
+            search_results, parts, display = search_vector_store_direct(
                 prompt, vector_db_id, vector_db_name, state
             )
             if search_results:
-                all_search_results.append((vector_db_name, search_results))
+                all_search_results.append((vector_db_name, display))
             context_parts.extend(parts)
 
         # Step 2: Build messages (with or without RAG context)
