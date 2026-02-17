@@ -26,6 +26,7 @@ POSTGRES_DBNAME ?= rag_blueprint
 MINIO_USER ?= minio_rag_user
 MINIO_PASSWORD ?= minio_rag_password
 # HF_TOKEN will be managed by the get_hf_token helper function
+INTERACTIVE ?= true
 RAG_CHART := rag
 TOLERATIONS_TEMPLATE=[{"key":"$(1)","effect":"NoSchedule","operator":"Exists"}]
 
@@ -40,6 +41,7 @@ define check_values_file
 			echo -e "$(YELLOW)[INFO]$(NC) Values file not found. Creating from example..."; \
 			cp "$(VALUES_EXAMPLE)" "$(VALUES_FILE)"; \
 			if [ -z "$(LLM)" ]; then \
+			if [ "$(INTERACTIVE)" = "true" ]; then \
 				echo -e ""; \
 				echo -e "$(GREEN)╔══════════════════════════════════════════════════════════════════════════╗$(NC)"; \
 				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
@@ -69,6 +71,9 @@ define check_values_file
 				read -p "" continue; \
 				echo -e "$(BLUE)[INFO]$(NC) Continuing with installation..."; \
 				echo -e ""; \
+			else \
+				echo -e "$(YELLOW)[INFO]$(NC) Non-interactive mode: skipping configuration prompt. Using $(VALUES_FILE) as-is."; \
+			fi; \
 			else \
 				echo -e "$(GREEN)[SUCCESS]$(NC) Using LLM model from command line: $(LLM)"; \
 				echo -e ""; \
@@ -103,33 +108,41 @@ define validate_values_file
 	LLAMA_STACK_TAVILY=$$(grep "TAVILY_SEARCH_API_KEY:" "$(VALUES_FILE)" 2>/dev/null | sed 's/.*TAVILY_SEARCH_API_KEY: *//' | tr -d '"' | tr -d ' '); \
 	\
 	if [ -z "$$HF_TOKEN_FILE" ] || [ "$$HF_TOKEN_FILE" = "" ]; then \
-		echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Model downloads may fail."; \
-		echo -e "$(BLUE)[INFO]$(NC) Get your token from: https://huggingface.co/settings/tokens"; \
-		echo -e ""; \
-		read -p "Enter your Hugging Face token (or press Enter to skip): " hf_input; \
-		if [ -n "$$hf_input" ]; then \
-			sed -i.bak "/^llm-service:/,/^[^ ]/ s|hf_token:.*|hf_token: \"$$hf_input\"|" "$(VALUES_FILE)"; \
-			echo -e "$(GREEN)[SUCCESS]$(NC) Hugging Face token saved to configuration."; \
-			UPDATED=1; \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Model downloads may fail."; \
+			echo -e "$(BLUE)[INFO]$(NC) Get your token from: https://huggingface.co/settings/tokens"; \
+			echo -e ""; \
+			read -p "Enter your Hugging Face token (or press Enter to skip): " hf_input; \
+			if [ -n "$$hf_input" ]; then \
+				sed -i.bak "/^llm-service:/,/^[^ ]/ s|hf_token:.*|hf_token: \"$$hf_input\"|" "$(VALUES_FILE)"; \
+				echo -e "$(GREEN)[SUCCESS]$(NC) Hugging Face token saved to configuration."; \
+				UPDATED=1; \
+			else \
+				echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token not provided. Model downloads may fail."; \
+			fi; \
+			echo -e ""; \
 		else \
-			echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token not provided. Model downloads may fail."; \
+			echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Use HF_TOKEN env var or set it in $(VALUES_FILE)."; \
 		fi; \
-		echo -e ""; \
 	fi; \
 	\
 	if [ -z "$$LLAMA_STACK_TAVILY" ] || [ "$$LLAMA_STACK_TAVILY" = "Paste-your-key-here" ]; then \
-		echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Web search will be disabled."; \
-		echo -e "$(BLUE)[INFO]$(NC) Get your key from: https://tavily.com/"; \
-		echo -e ""; \
-		read -p "Enter your TAVILY search API key (or press Enter to skip): " tavily_input; \
-		if [ -n "$$tavily_input" ]; then \
-			sed -i.bak "s/TAVILY_SEARCH_API_KEY:.*/TAVILY_SEARCH_API_KEY: \"$$tavily_input\"/" "$(VALUES_FILE)"; \
-			echo -e "$(GREEN)[SUCCESS]$(NC) TAVILY search API key saved to configuration."; \
-			UPDATED=1; \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Web search will be disabled."; \
+			echo -e "$(BLUE)[INFO]$(NC) Get your key from: https://tavily.com/"; \
+			echo -e ""; \
+			read -p "Enter your TAVILY search API key (or press Enter to skip): " tavily_input; \
+			if [ -n "$$tavily_input" ]; then \
+				sed -i.bak "s/TAVILY_SEARCH_API_KEY:.*/TAVILY_SEARCH_API_KEY: \"$$tavily_input\"/" "$(VALUES_FILE)"; \
+				echo -e "$(GREEN)[SUCCESS]$(NC) TAVILY search API key saved to configuration."; \
+				UPDATED=1; \
+			else \
+				echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key not provided. Web search will be disabled."; \
+			fi; \
+			echo -e ""; \
 		else \
-			echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key not provided. Web search will be disabled."; \
+			echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Use TAVILY_API_KEY env var or set it in $(VALUES_FILE)."; \
 		fi; \
-		echo -e ""; \
 	fi; \
 	\
 	if [ $$UPDATED -eq 1 ]; then \
@@ -173,6 +186,7 @@ helm_llm_service_args = \
     --set llm-service.secret.hf_token=$(HF_TOKEN) \
     $(if $(DEVICE),--set llm-service.device='$(DEVICE)',) \
     $(if $(LLM),--set global.models.$(LLM).enabled=true,) \
+    $(if $(LLM_MODEL),--set global.models.$(LLM).id='$(LLM_MODEL)',) \
     $(if $(SAFETY),--set global.models.$(SAFETY).enabled=true,) \
     $(if $(LLM_TOLERATION),--set-json global.models.$(LLM).tolerations='$(call TOLERATIONS_TEMPLATE,$(LLM_TOLERATION))',) \
     $(if $(SAFETY_TOLERATION),--set-json global.models.$(SAFETY).tolerations='$(call TOLERATIONS_TEMPLATE,$(SAFETY_TOLERATION))',) \
@@ -180,6 +194,7 @@ helm_llm_service_args = \
 
 helm_llama_stack_args = \
     $(if $(LLM),--set global.models.$(LLM).enabled=true,) \
+    $(if $(LLM_MODEL),--set global.models.$(LLM).id='$(LLM_MODEL)',) \
     $(if $(SAFETY),--set global.models.$(SAFETY).enabled=true,) \
     $(if $(LLM_URL),--set global.models.$(LLM).url='$(LLM_URL)',) \
     $(if $(SAFETY_URL),--set global.models.$(SAFETY).url='$(SAFETY_URL)',) \
@@ -231,6 +246,7 @@ help: ## Show this help message
 	@echo -e ""
 	@echo -e "$(GREEN)Command-Line Parameters (override values file):$(NC)"
 	@echo -e "  LLM           - Enable specific LLM model (e.g., llama-3-2-3b-instruct)"
+	@echo -e "  LLM_MODEL     - Override model ID for the LLM (e.g., meta-llama/Llama-3.2-3B-Instruct)"
 	@echo -e "  SAFETY        - Enable specific safety model (e.g., llama-guard-3-8b)"
 	@echo -e "  LLM_TOLERATION - Set toleration for LLM model (e.g., nvidia.com/gpu)"
 	@echo -e "  SAFETY_TOLERATION - Set toleration for safety model"
@@ -240,6 +256,7 @@ help: ## Show this help message
 	@echo -e "  SAFETY_URL    - URL for remote safety service"
 	@echo -e "  LLM_API_TOKEN - API token for remote LLM service"
 	@echo -e "  SAFETY_API_TOKEN - API token for remote safety service"
+	@echo -e "  INTERACTIVE   - Enable interactive prompts (default: true, set false to skip)"
 	@echo -e ""
 	@echo -e "$(GREEN)Quick Start:$(NC)"
 	@echo -e "  $(BLUE)Option 1:$(NC) Using values file (recommended)"
@@ -485,21 +502,30 @@ install: ## Install the RAG deployment
 	@echo -e "$(BLUE)[INFO]$(NC) Installing $(RAG_CHART) helm chart with $(VALUES_FILE)..."
 	@HELM_ARGS="-f $(VALUES_FILE)"; \
 	if [ -n "$(LLM)" ]; then \
-		echo -e "$(BLUE)[INFO]$(NC) Enabling LLM model: $(LLM)"; \
-		HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).enabled=true"; \
+		MODEL_KEY="$(LLM)"; \
+		if [ "$(LLM)" = "remote-llm" ] && [ -n "$(LLM_MODEL)" ]; then \
+			MODEL_KEY=$$(echo "$(LLM_MODEL)" | tr '/' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]'); \
+			echo -e "$(YELLOW)[INFO]$(NC) 'remote-llm' is a reserved key in llama-stack chart, using '$$MODEL_KEY' as model key"; \
+		fi; \
+		echo -e "$(BLUE)[INFO]$(NC) Enabling LLM model: $$MODEL_KEY"; \
+		HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.enabled=true"; \
+		if [ -n "$(LLM_MODEL)" ]; then \
+			echo -e "$(BLUE)[INFO]$(NC) Setting LLM model ID: $(LLM_MODEL)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.id=$(LLM_MODEL)"; \
+		fi; \
 		if [ -n "$(LLM_TOLERATION)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM toleration: $(LLM_TOLERATION)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].key=$(LLM_TOLERATION)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].effect=NoSchedule"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].operator=Exists"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.tolerations[0].key=$(LLM_TOLERATION)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.tolerations[0].effect=NoSchedule"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.tolerations[0].operator=Exists"; \
 		fi; \
 		if [ -n "$(LLM_URL)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM URL: $(LLM_URL)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url=$(LLM_URL)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.url=$(LLM_URL)"; \
 		fi; \
 		if [ -n "$(LLM_API_TOKEN)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM API token"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).apiToken=$(LLM_API_TOKEN)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.apiToken=$(LLM_API_TOKEN)"; \
 		fi; \
 	fi; \
 	if [ -n "$(SAFETY)" ]; then \
