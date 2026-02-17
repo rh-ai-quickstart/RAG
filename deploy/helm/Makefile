@@ -186,7 +186,6 @@ helm_llm_service_args = \
     --set llm-service.secret.hf_token=$(HF_TOKEN) \
     $(if $(DEVICE),--set llm-service.device='$(DEVICE)',) \
     $(if $(LLM),--set global.models.$(LLM).enabled=true,) \
-    $(if $(LLM_MODEL),--set global.models.$(LLM).id='$(LLM_MODEL)',) \
     $(if $(SAFETY),--set global.models.$(SAFETY).enabled=true,) \
     $(if $(LLM_TOLERATION),--set-json global.models.$(LLM).tolerations='$(call TOLERATIONS_TEMPLATE,$(LLM_TOLERATION))',) \
     $(if $(SAFETY_TOLERATION),--set-json global.models.$(SAFETY).tolerations='$(call TOLERATIONS_TEMPLATE,$(SAFETY_TOLERATION))',) \
@@ -194,7 +193,6 @@ helm_llm_service_args = \
 
 helm_llama_stack_args = \
     $(if $(LLM),--set global.models.$(LLM).enabled=true,) \
-    $(if $(LLM_MODEL),--set global.models.$(LLM).id='$(LLM_MODEL)',) \
     $(if $(SAFETY),--set global.models.$(SAFETY).enabled=true,) \
     $(if $(LLM_URL),--set global.models.$(LLM).url='$(LLM_URL)',) \
     $(if $(SAFETY_URL),--set global.models.$(SAFETY).url='$(SAFETY_URL)',) \
@@ -246,7 +244,6 @@ help: ## Show this help message
 	@echo -e ""
 	@echo -e "$(GREEN)Command-Line Parameters (override values file):$(NC)"
 	@echo -e "  LLM           - Enable specific LLM model (e.g., llama-3-2-3b-instruct)"
-	@echo -e "  LLM_MODEL     - Override model ID for the LLM (e.g., meta-llama/Llama-3.2-3B-Instruct)"
 	@echo -e "  SAFETY        - Enable specific safety model (e.g., llama-guard-3-8b)"
 	@echo -e "  LLM_TOLERATION - Set toleration for LLM model (e.g., nvidia.com/gpu)"
 	@echo -e "  SAFETY_TOLERATION - Set toleration for safety model"
@@ -264,8 +261,11 @@ help: ## Show this help message
 	@echo -e "    2. make configure-keys  # Set up API keys interactively"
 	@echo -e "    3. make install NAMESPACE=my-rag  # Install with your config"
 	@echo -e ""
-	@echo -e "  $(BLUE)Option 2:$(NC) Using command-line parameters"
+	@echo -e "  $(BLUE)Option 2:$(NC) Using command-line parameters with LLM provisioning on OpenShift AI"
 	@echo -e "    make install NAMESPACE=my-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION=\"nvidia.com/gpu\""
+	@echo -e ""
+	@echo -e "  $(BLUE)Option 3:$(NC) Using command-line parameters with remote LLM"
+	@echo -e "    make install NAMESPACE=my-rag LLM=remote-llm LLM_URL=https://<<llm-url>>/v1 LLM_API_TOKEN=<<llm-api-token>>"
 
 # Dependency checks
 .PHONY: check-deps
@@ -502,30 +502,21 @@ install: ## Install the RAG deployment
 	@echo -e "$(BLUE)[INFO]$(NC) Installing $(RAG_CHART) helm chart with $(VALUES_FILE)..."
 	@HELM_ARGS="-f $(VALUES_FILE)"; \
 	if [ -n "$(LLM)" ]; then \
-		MODEL_KEY="$(LLM)"; \
-		if [ "$(LLM)" = "remote-llm" ] && [ -n "$(LLM_MODEL)" ]; then \
-			MODEL_KEY=$$(echo "$(LLM_MODEL)" | tr '/' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]'); \
-			echo -e "$(YELLOW)[INFO]$(NC) 'remote-llm' is a reserved key in llama-stack chart, using '$$MODEL_KEY' as model key"; \
-		fi; \
-		echo -e "$(BLUE)[INFO]$(NC) Enabling LLM model: $$MODEL_KEY"; \
-		HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.enabled=true"; \
-		if [ -n "$(LLM_MODEL)" ]; then \
-			echo -e "$(BLUE)[INFO]$(NC) Setting LLM model ID: $(LLM_MODEL)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.id=$(LLM_MODEL)"; \
-		fi; \
+		echo -e "$(BLUE)[INFO]$(NC) Enabling LLM model: $(LLM)"; \
+		HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).enabled=true"; \
 		if [ -n "$(LLM_TOLERATION)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM toleration: $(LLM_TOLERATION)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.tolerations[0].key=$(LLM_TOLERATION)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.tolerations[0].effect=NoSchedule"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.tolerations[0].operator=Exists"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].key=$(LLM_TOLERATION)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].effect=NoSchedule"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].operator=Exists"; \
 		fi; \
 		if [ -n "$(LLM_URL)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM URL: $(LLM_URL)"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.url=$(LLM_URL)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url=$(LLM_URL)"; \
 		fi; \
 		if [ -n "$(LLM_API_TOKEN)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM API token"; \
-			HELM_ARGS="$$HELM_ARGS --set global.models.$$MODEL_KEY.apiToken=$(LLM_API_TOKEN)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).apiToken=$(LLM_API_TOKEN)"; \
 		fi; \
 	fi; \
 	if [ -n "$(SAFETY)" ]; then \

@@ -255,13 +255,12 @@ make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-gu
 
 **Remote LLM Deployment Example:**
 
-To connect to a remote LLM endpoint instead of deploying a local model, use `LLM_URL`, `LLM_MODEL`, and `LLM_API_TOKEN`:
+To connect to a remote LLM endpoint instead of deploying a local model, use `LLM_URL` and `LLM_API_TOKEN`:
 
 ```bash
 make install NAMESPACE=llama-stack-rag \
   LLM=remote-llm \
   LLM_URL=https://my-model-endpoint.example.com/v1 \
-  LLM_MODEL=my-model-name \
   LLM_API_TOKEN=my-api-token
 ```
 
@@ -269,7 +268,6 @@ make install NAMESPACE=llama-stack-rag \
 |-----------|-------------|
 | `LLM=remote-llm` | Indicates a remote model (no local vLLM deployment) |
 | `LLM_URL` | The base URL of the remote model endpoint |
-| `LLM_MODEL` | The model ID served at the remote endpoint |
 | `LLM_API_TOKEN` | Authentication token for the remote endpoint |
 
 This skips local model deployment and configures LlamaStack to use the remote inference endpoint directly. No GPU or HF token is required for the LLM.
