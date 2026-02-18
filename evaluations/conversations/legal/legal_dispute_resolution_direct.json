@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test dispute resolution process query against FantaCo Contract Reviewer Analyst P&P Manual"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["legal-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the dispute resolution process?",
+      "expected_output": "The document addresses dispute resolution as part of its Escalation Procedures. If the initiating department and counterparty cannot agree on terms after the analyst's review and proposed revisions, the matter is escalated to their respective departmental leads for further negotiation or decision. All escalations, including the issue, parties involved, and resolution, are documented in the CMS.",
+      "expected_rag_content": {
+        "chunks": [
+          "4.5. Escalation Procedures\n\nPolicy Statement: Issues falling outside the Contract Reviewer Analyst's authority or expertise, or unresolved disputes, will be escalated according to defined departmental hierarchies.\n\nProcedure:\n1. Legal Escalation: Any clauses deemed legally ambiguous, non-compliant, or high-risk (e.g., significant indemnity, uncapped liability) that cannot be resolved through standard redlining will be immediately escalated to the FantaCo Legal Department.\n2. Financial Escalation: Issues related to non-standard payment terms, significant financial risk, or complex revenue recognition outside of policy will be escalated to the FantaCo Finance Department.\n3. Operational Escalation: Terms that are operationally unfeasible or require significant resource allocation beyond standard capacity will be escalated to the relevant Department Head or Project Management Office (PMO).\n4. Dispute Resolution: If the initiating department and counterparty cannot agree on terms after the analyst's review and proposed revisions, the matter will be escalated to their respective departmental leads for further negotiation or decision.\n5. Documentation of Escalation: All escalations, including the issue, parties involved, and resolution, will be documented in the CMS."
+        ]
+      }
+    }
+  ]
+}

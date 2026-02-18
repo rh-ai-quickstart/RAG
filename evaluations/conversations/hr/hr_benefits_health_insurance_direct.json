@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test health insurance benefits query against FantaCo HR Benefits document"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo offers a comprehensive healthcare plan called the \"Fountain of Youth & General Awesomeness\" Healthcare Plan. It includes health, dental, and vision coverage with unique perks such as: Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for wellness potions and emergency glitter infusions.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan (Because Aging is So Last Century, and Frankly, a Bit Boring): Our comprehensive health, dental, and vision plan is so good, it's rumored to reverse male pattern baldness, grant the ability to see in the dark, and allow you to understand what your pet is really thinking (results may vary, side effects may include an insatiable craving for carrots and a sudden urge to chase squirrels). It includes: Unlimited Unicorn Tear Eye Drops: For sparkling vision, the ability to spot a typo from a mile away, and occasionally seeing rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars. Griffin Feather Pillows & Comforters: For the most regenerative sleep imaginable. Say goodbye to under-eye bags, say hello to actually wanting to wake up before your alarm (which, by the way, can be a symphony orchestra or a chorus of delighted otters). On-site Alchemist & Potion Master: For all your minor transmutation needs (paperclips into gold-leafed paperclips, for instance), bespoke wellness potions, and emergency glitter infusions. (Warning: Do not request the Philosopher's Stone. HR gets very cross, and the paperwork is a nightmare.)"
+        ]
+      }
+    }
+  ]
+}

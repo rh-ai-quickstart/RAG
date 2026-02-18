@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "description": "Test liability clause query against FantaCo Contract Reviewer Analyst P&P Manual"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["legal-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the liability clause?",
+      "expected_output": "The manual does not define a standard liability clause but addresses liability in two ways. During contract review, analysts identify and assess liabilities, indemnities, warranties, limitations of liability, and termination clauses under the Risk Assessment area, proposing modifications to mitigate identified risks. Under Escalation Procedures, any clauses involving significant indemnity or uncapped liability that cannot be resolved through standard redlining must be immediately escalated to the FantaCo Legal Department.",
+      "expected_rag_content": {
+        "chunks": [
+          "Key Areas of Review:\n■ Legal Compliance: Identify any clauses that may violate laws, regulations, or FantaCo's legal guidelines (e.g., data privacy, intellectual property, anti-bribery). Flag items requiring Legal Department input.\n■ Financial Terms: Verify pricing, payment terms, currency, tax implications, and revenue recognition against financial policies. Flag items for Finance Department review.\n■ Risk Assessment: Identify and assess liabilities, indemnities, warranties, limitations of liability, and termination clauses. Propose modifications to mitigate identified risks.\n■ Operational Feasibility: Ensure terms are operationally executable by relevant FantaCo departments (e.g., delivery schedules, service levels, technical specifications).\n■ Internal Consistency: Check for contradictions or ambiguities within the contract itself.\n■ Term & Termination: Verify clear start/end dates, renewal options, and termination rights/obligations.",
+          "4.5. Escalation Procedures\n\nPolicy Statement: Issues falling outside the Contract Reviewer Analyst's authority or expertise, or unresolved disputes, will be escalated according to defined departmental hierarchies.\n\nProcedure:\n1. Legal Escalation: Any clauses deemed legally ambiguous, non-compliant, or high-risk (e.g., significant indemnity, uncapped liability) that cannot be resolved through standard redlining will be immediately escalated to the FantaCo Legal Department.\n2. Financial Escalation: Issues related to non-standard payment terms, significant financial risk, or complex revenue recognition outside of policy will be escalated to the FantaCo Finance Department.\n3. Operational Escalation: Terms that are operationally unfeasible or require significant resource allocation beyond standard capacity will be escalated to the relevant Department Head or Project Management Office (PMO).\n4. Dispute Resolution: If the initiating department and counterparty cannot agree on terms after the analyst's review and proposed revisions, the matter will be escalated to their respective departmental leads for further negotiation or decision.\n5. Documentation of Escalation: All escalations, including the issue, parties involved, and resolution, will be documented in the CMS."
+        ]
+      }
+    }
+  ]
+}

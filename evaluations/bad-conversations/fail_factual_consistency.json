@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: Assistant response directly contradicts the expected chunks by stating '10 Adventure Units' when the chunks state '365 Adventure Units'. Should fail Response Accuracy (contradiction check)."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "How many vacation days do employees get?",
+      "expected_output": "FantaCo employees receive 365 Adventure Units per year under the \"Never-Ending Story of Glorious Time Off\" Vacation Policy. These can be used for any adventure, and unused units can be traded for company shares or a slightly used hovercraft.",
+      "expected_rag_content": {
+        "chunks": [
+          ". The \"Never-Ending Story of Glorious Time Off\" Vacation Policy (Because Burnout is for Chumps and People Who Don't Work at FantaCo): We don't do vacation days. We do \"Adventure Allotments\" and \"Spontaneous Sabbaticals.\" Each employee starts with 365 \"Adventure Units\" per year, because every day should have the potential for adventure. Want to spend a month learning to throat-sing with Tuvan monks while simultaneously training for a marathon on the Great Wall of China? Go for it. Fancy a weekend jaunt to Atlantis (scuba gear, merman translators, and complimentary waterproof notebooks provided)? Be our guest! Unused Adventure Units can be traded for shares in the company's highly lucrative (and entirely fictional, wink wink) moon-cheese mining operation or a slightly used hovercraft."
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          ". The \"Never-Ending Story of Glorious Time Off\" Vacation Policy (Because Burnout is for Chumps and People Who Don't Work at FantaCo): We don't do vacation days. We do \"Adventure Allotments\" and \"Spontaneous Sabbaticals.\" Each employee starts with 365 \"Adventure Units\" per year, because every day should have the potential for adventure. Want to spend a month learning to throat-sing with Tuvan monks while simultaneously training for a marathon on the Great Wall of China? Go for it. Fancy a weekend jaunt to Atlantis (scuba gear, merman translators, and complimentary waterproof notebooks provided)? Be our guest! Unused Adventure Units can be traded for shares in the company's highly lucrative (and entirely fictional, wink wink) moon-cheese mining operation or a slightly used hovercraft."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo employees receive 10 Adventure Units per year under the \"Never-Ending Story of Glorious Time Off\" Vacation Policy. Unused Adventure Units can be traded for shares in the moon-cheese mining operation or a slightly used hovercraft."
+    }
+  ]
+}
