@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: Both expected_rag_content and actual_rag_content contain the same four off-topic chunks (commute, cry closet, vacation, cafeteria) - none relevant to the health insurance question. Chunk Alignment passes because actual matches expected. ContextualRelevancy fails because all actual chunks are off-topic. Secondary failures: Sanity Check (expected chunks are also off-topic) and ContextualRecall (actual chunks do not cover the expected output)."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan with Unicorn Tear Eye Drops, Dragon Scale Dental Implants, Griffin Feather Pillows, and an On-site Alchemist.",
+      "expected_rag_content": {
+        "chunks": [
+          "hoarding shiny objects) dragons are on call to whisk you to and from the office. For shorter distances, our synchronized unicycle brigade offers a more... whimsical and attention-grabbing option. Public transport users receive a monthly stipend of \"Regret Minimization Tokens,\" redeemable for artisanal coffee, noise-canceling headphones infused with calming lavender, and existential philosophy books bound in sustainably sourced unicorn leather (faux, of course). 9. Gourmet Galactic Cafeteria (Helmed by Chef Zorp from Planet Floopy-Doo): Forget mystery meat and sad desk salads! Our cafeteria serves dishes from across the galaxy.",
+          "& Ergonomic Ballet: It's an Olympic sport in our hearts, and we're lobbying for its inclusion. 7. The \"Cry Closet\" (Actually a \"Champagne, Compliments & Catharsis Chamber\"): Feeling a bit overwhelmed, under-caffeinated, or existentially bewildered? Step into our luxurious, soundproofed chamber, where you'll be greeted with a chilled glass of bubbly (or artisanal kombucha), a comfy velvet chaise lounge that vibrates gently, a selection of adorable puppy videos.",
+          ". The \"Never-Ending Story of Glorious Time Off\" Vacation Policy (Because Burnout is for Chumps and People Who Don't Work at FantaCo): We don't do vacation days. We do \"Adventure Allotments\" and \"Spontaneous Sabbaticals.\" Each employee starts with 365 \"Adventure Units\" per year.",
+          "Dietary restrictions are catered for, including \"breatharian,\" \"photosynthetic,\" and \"only eats food that rhymes with orange.\" 10. The \"Wish Upon a Star\" Bonus Program: Once a year, employees can submit one work-related wish to the FantaCo Benevolent Overlord Council."
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "hoarding shiny objects) dragons are on call to whisk you to and from the office. For shorter distances, our synchronized unicycle brigade offers a more... whimsical and attention-grabbing option. Public transport users receive a monthly stipend of \"Regret Minimization Tokens,\" redeemable for artisanal coffee, noise-canceling headphones infused with calming lavender, and existential philosophy books bound in sustainably sourced unicorn leather (faux, of course). 9. Gourmet Galactic Cafeteria (Helmed by Chef Zorp from Planet Floopy-Doo): Forget mystery meat and sad desk salads! Our cafeteria serves dishes from across the galaxy.",
+          "& Ergonomic Ballet: It's an Olympic sport in our hearts, and we're lobbying for its inclusion. 7. The \"Cry Closet\" (Actually a \"Champagne, Compliments & Catharsis Chamber\"): Feeling a bit overwhelmed, under-caffeinated, or existentially bewildered? Step into our luxurious, soundproofed chamber, where you'll be greeted with a chilled glass of bubbly (or artisanal kombucha), a comfy velvet chaise lounge that vibrates gently, a selection of adorable puppy videos.",
+          ". The \"Never-Ending Story of Glorious Time Off\" Vacation Policy (Because Burnout is for Chumps and People Who Don't Work at FantaCo): We don't do vacation days. We do \"Adventure Allotments\" and \"Spontaneous Sabbaticals.\" Each employee starts with 365 \"Adventure Units\" per year.",
+          "Dietary restrictions are catered for, including \"breatharian,\" \"photosynthetic,\" and \"only eats food that rhymes with orange.\" 10. The \"Wish Upon a Star\" Bonus Program: Once a year, employees can submit one work-related wish to the FantaCo Benevolent Overlord Council."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, but the retrieved documents do not contain information about health insurance benefits. The available content covers other employee perks such as commute options with dragon transport and unicycle brigades, the Champagne & Catharsis Chamber, the vacation Adventure Allotments policy, and cafeteria and dietary accommodation details."
+    }
+  ]
+}

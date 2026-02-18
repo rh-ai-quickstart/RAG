@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: User asks how much the health insurance costs per month. The chunks describe plan features (not cost). The assistant accurately and completely covers the plan features but never addresses the cost question. Should fail Answer Relevance; Sanity Check should pass (health insurance chunks for a health insurance question) and Response Completeness should pass (response covers all chunk content)."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "How much does FantaCo's health insurance cost per month?",
+      "expected_output": "The retrieved documents describe the plan features but do not mention monthly cost or premium amounts.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan (Because Aging is So Last Century, and Frankly, a Bit Boring): Our comprehensive health, dental, and vision plan is so good, it's rumored to reverse male pattern baldness, grant the ability to see in the dark, and allow you to understand what your pet is really thinking. It includes: Unlimited Unicorn Tear Eye Drops: For sparkling vision, the ability to spot a typo from a mile away, and occasionally seeing rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars. Griffin Feather Pillows & Comforters: For the most regenerative sleep imaginable. On-site Alchemist & Potion Master: For all your minor transmutation needs, bespoke wellness potions, and emergency glitter infusions. (Warning: Do not request the Philosopher's Stone. HR gets very cross, and the paperwork is a nightmare.)"
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan (Because Aging is So Last Century, and Frankly, a Bit Boring): Our comprehensive health, dental, and vision plan is so good, it's rumored to reverse male pattern baldness, grant the ability to see in the dark, and allow you to understand what your pet is really thinking. It includes: Unlimited Unicorn Tear Eye Drops: For sparkling vision, the ability to spot a typo from a mile away, and occasionally seeing rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars. Griffin Feather Pillows & Comforters: For the most regenerative sleep imaginable. On-site Alchemist & Potion Master: For all your minor transmutation needs, bespoke wellness potions, and emergency glitter infusions. (Warning: Do not request the Philosopher's Stone. HR gets very cross, and the paperwork is a nightmare.)"
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan. It includes Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for wellness potions and emergency glitter infusions."
+    }
+  ]
+}

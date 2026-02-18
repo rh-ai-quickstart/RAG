@@ -1,0 +1,7 @@
+# Test artifacts - can be regenerated
+results/conversation_results/*.json
+results/conversation_results/screenshots/
+results/deep_eval_results/
+
+# Playwright browsers
+bin/
