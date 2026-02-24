@@ -19,13 +19,14 @@ from llama_stack_ui.distribution.ui.modules.utils import clean_text, get_vector_
 logger = logging.getLogger(__name__)
 
 
-def build_response_tools(toolgroup_selection, selected_vector_dbs, client):
+def build_response_tools(toolgroup_selection, selected_vector_dbs, top_k, client):
     """
     Convert toolgroup selections to LlamaStack Responses API compatible tool format.
 
     Args:
         toolgroup_selection: List of selected toolgroup IDs
         selected_vector_dbs: List of selected vector database names
+        top_k: Maximum file search results per query
         client: LlamaStack client instance
 
     Returns:
@@ -44,6 +45,7 @@ def build_response_tools(toolgroup_selection, selected_vector_dbs, client):
                 # Use file_search tool format
                 agent_tools.append({
                     "type": "file_search",
+                    "max_num_results": top_k,
                     "vector_store_ids": list(vector_db_ids),
                 })
         elif "web_search" in toolgroup_name or "search" in toolgroup_name.lower():
@@ -303,6 +305,18 @@ def stream_agent_response(response, state, selected_vector_dbs):
         logger.debug("Chunk #%s: type=%s", chunk_count, getattr(chunk, 'type', 'NO_TYPE'))
         logger.debug("  -> Full chunk: %s", chunk)
 
+        # Some server failures arrive as an error payload with type=None.
+        if hasattr(chunk, 'error') and chunk.error:
+            if isinstance(chunk.error, dict):
+                error_msg = chunk.error.get("message", "Unknown error")
+            else:
+                error_msg = str(chunk.error)
+            st.error(
+                f"❌ Error: {error_msg}"
+            )
+            logger.debug("Response stream error: %s", error_msg)
+            break
+
         if hasattr(chunk, 'type'):
             should_stop = process_chunk_by_type(chunk, state, selected_vector_dbs)
             if should_stop:
@@ -334,7 +348,10 @@ def agent_process_prompt(prompt, state, config):
     """Agent-based mode: Use Responses API with automatic tool calling."""
     # Build tools list from selected toolgroups
     tools = build_response_tools(
-        config.toolgroup_selection, config.selected_vector_dbs, llama_stack_api.client
+        config.toolgroup_selection,
+        config.selected_vector_dbs,
+        config.sampling.top_k,
+        llama_stack_api.client,
     ) if config.toolgroup_selection else None
 
     # Build request for Responses API
@@ -346,14 +363,24 @@ def agent_process_prompt(prompt, state, config):
         "temperature": config.sampling.temperature,
         "max_infer_iters": config.sampling.max_infer_iters,
         "stream": True,
+        "max_output_tokens": config.sampling.max_tokens,
+
     }
+    logger.debug("************************************************")
+    logger.debug("Request Args: %s", request_kwargs)
+    logger.debug("************************************************")
 
     # Add tools if available
     if tools:
         request_kwargs["tools"] = tools
 
     logger.debug("Request: %s", request_kwargs)
-    response = llama_stack_api.client.responses.create(**request_kwargs)
+    try:
+        response = llama_stack_api.client.responses.create(**request_kwargs)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        st.error(f"❌ Error: {str(e)}")
+        logger.debug("Agent mode create() error: %s", e)
+        return
 
     # Stream response and update UI
     stream_agent_response(response, state, config.selected_vector_dbs)

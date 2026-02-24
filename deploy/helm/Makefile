@@ -223,7 +223,8 @@ help: ## Show this help message
 	@echo -e "  health        - Check health of all services"
 	@echo -e ""
 	@echo -e "$(GREEN)Development Targets:$(NC)"
-	@echo -e "  dev           - Start development environment"
+	@echo -e "  dev-start     - Install (if needed), port-forward, and start Streamlit locally"
+	@echo -e "  dev-stop      - Stop Streamlit & port-forwards, optionally uninstall"
 	@echo -e "  validate      - Validate Helm chart"
 	@echo -e "  validate-config - Validate configuration values"
 	@echo -e "  monitor       - Monitor deployment status"
@@ -350,15 +351,80 @@ namespace:
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Namespace $(NAMESPACE) is ready"
 
 # Development targets
-.PHONY: dev
-dev: ## Start development environment
+FRONTEND_DIR := ../../frontend
+LLAMASTACK_LOCAL_PORT ?= 8321
+PGVECTOR_LOCAL_PORT ?= 5432
+
+.PHONY: dev-start
+dev-start: ## Install (if needed), port-forward, and start Streamlit locally
 	@if [ -z "$(NAMESPACE)" ]; then echo -e "$(RED)[ERROR]$(NC) NAMESPACE is required for dev"; exit 1; fi
 	@$(MAKE) check-deps
-	@$(MAKE) validate-config
-	@echo -e "$(BLUE)[INFO]$(NC) Starting RAG development environment..."
-	@$(call check_values_file)
-	@$(MAKE) install
-	@echo -e "$(GREEN)[SUCCESS]$(NC) Development environment started"
+	@if [ ! -d "$(FRONTEND_DIR)" ]; then echo -e "$(RED)[ERROR]$(NC) Frontend directory not found at $(FRONTEND_DIR)"; exit 1; fi
+	@if helm status $(RAG_CHART) -n $(NAMESPACE) >/dev/null 2>&1; then \
+		echo -e "$(YELLOW)[INFO]$(NC) RAG is already installed in namespace $(NAMESPACE)."; \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			read -p "Do you want to reinstall? [y/N] " answer; \
+			if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+				echo -e "$(BLUE)[INFO]$(NC) Reinstalling..."; \
+				$(MAKE) install NAMESPACE=$(NAMESPACE); \
+			else \
+				echo -e "$(BLUE)[INFO]$(NC) Skipping reinstall. Using existing deployment."; \
+			fi; \
+		else \
+			echo -e "$(BLUE)[INFO]$(NC) Non-interactive mode: skipping reinstall."; \
+		fi; \
+	else \
+		echo -e "$(BLUE)[INFO]$(NC) RAG is not installed in namespace $(NAMESPACE). Installing..."; \
+		$(MAKE) install NAMESPACE=$(NAMESPACE); \
+	fi
+	@echo -e ""
+	@echo -e "$(BLUE)[INFO]$(NC) Setting up port-forwards..."
+	@-pkill -f "oc port-forward.*svc/llamastack" 2>/dev/null ||:
+	@-pkill -f "oc port-forward.*svc/pgvector" 2>/dev/null ||:
+	@sleep 1
+	@echo -e "$(BLUE)[INFO]$(NC) Port-forwarding llamastack (localhost:$(LLAMASTACK_LOCAL_PORT) -> 8321)..."
+#@oc port-forward svc/llamastack $(LLAMASTACK_LOCAL_PORT):8321 -n $(NAMESPACE) &>/dev/null &
+	@echo -e "$(BLUE)[INFO]$(NC) Port-forwarding pgvector (localhost:$(PGVECTOR_LOCAL_PORT) -> 5432)..."
+# @oc port-forward svc/pgvector $(PGVECTOR_LOCAL_PORT):5432 -n $(NAMESPACE) &>/dev/null &
+	@sleep 2
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Port-forwards active:"
+	@echo -e "  llama-stack: http://localhost:$(LLAMASTACK_LOCAL_PORT)"
+	@echo -e "  pgvector:    localhost:$(PGVECTOR_LOCAL_PORT)"
+	@echo -e ""
+	@echo -e "$(BLUE)[INFO]$(NC) Loading suggested questions from ConfigMap..."
+	@SUGGESTED_QUESTIONS_JSON=$$(oc get configmap "$(RAG_CHART)-suggested-questions" -n $(NAMESPACE) -o jsonpath='{.data.RAG_QUESTION_SUGGESTIONS}' 2>/dev/null || true); \
+	if [ -n "$$SUGGESTED_QUESTIONS_JSON" ]; then \
+		echo -e "$(GREEN)[SUCCESS]$(NC) Loaded RAG_QUESTION_SUGGESTIONS from ConfigMap."; \
+	else \
+		echo -e "$(YELLOW)[WARNING]$(NC) Suggested questions ConfigMap not found; using empty suggestions."; \
+		SUGGESTED_QUESTIONS_JSON='{}'; \
+	fi; \
+	echo -e "$(BLUE)[INFO]$(NC) Starting Streamlit application..."; \
+	cd $(FRONTEND_DIR) && \
+	LLAMA_STACK_ENDPOINT=http://localhost:$(LLAMASTACK_LOCAL_PORT) \
+	RAG_QUESTION_SUGGESTIONS="$$SUGGESTED_QUESTIONS_JSON" \
+	bash start.sh
+
+.PHONY: dev-stop
+dev-stop: ## Stop Streamlit, port-forwards, and optionally uninstall
+	@echo -e "$(BLUE)[INFO]$(NC) Stopping Streamlit application..."
+	@-pkill -f "streamlit run" 2>/dev/null ||:
+	@echo -e "$(BLUE)[INFO]$(NC) Stopping port-forwards..."
+	@-pkill -f "oc port-forward.*svc/llamastack" 2>/dev/null ||:
+	@-pkill -f "oc port-forward.*svc/pgvector" 2>/dev/null ||:
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Local dev environment stopped."
+	@if [ -n "$(NAMESPACE)" ] && helm status $(RAG_CHART) -n $(NAMESPACE) >/dev/null 2>&1; then \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			read -p "Do you want to uninstall RAG from namespace $(NAMESPACE)? [y/N] " answer; \
+			if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+				$(MAKE) uninstall NAMESPACE=$(NAMESPACE); \
+			else \
+				echo -e "$(BLUE)[INFO]$(NC) RAG deployment left running in $(NAMESPACE)."; \
+			fi; \
+		else \
+			echo -e "$(BLUE)[INFO]$(NC) Non-interactive mode: RAG deployment left running in $(NAMESPACE)."; \
+		fi; \
+	fi
 
 # Validation targets
 .PHONY: validate

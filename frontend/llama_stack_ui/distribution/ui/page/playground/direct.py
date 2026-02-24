@@ -49,7 +49,7 @@ def extract_text_from_search_result(result):
     return clean_text(text) if text else None
 
 
-def search_vector_store_direct(prompt, vector_db_id, vector_db_name, state):
+def search_vector_store_direct(prompt, vector_db_id, vector_db_name, top_k, state):
     """Search vector store and extract context for Direct mode."""
     search_results = []
     context_parts = []
@@ -65,6 +65,7 @@ def search_vector_store_direct(prompt, vector_db_id, vector_db_name, state):
     search_response = llama_stack_api.client.vector_stores.search(
         vector_store_id=vector_db_id,
         query=prompt,
+        max_num_results=top_k,
     )
 
     logger.debug("Search response: %s", search_response)
@@ -198,7 +199,7 @@ def direct_process_prompt(prompt, state, config):
             vector_db_id = vector_db.id
             vector_db_name = get_vector_db_name(vector_db)
             search_results, parts, display = search_vector_store_direct(
-                prompt, vector_db_id, vector_db_name, state
+                prompt, vector_db_id, vector_db_name, config.sampling.top_k, state
             )
             if search_results:
                 all_search_results.append((vector_db_name, display))
@@ -216,6 +217,7 @@ def direct_process_prompt(prompt, state, config):
             model=config.model,
             messages=messages,
             temperature=config.sampling.temperature,
+            max_tokens=config.sampling.max_tokens,
             stream=True,
         )
 

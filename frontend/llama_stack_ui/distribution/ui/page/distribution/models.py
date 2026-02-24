@@ -19,7 +19,7 @@ def models():
     if not model_list:
         st.info("No models available.")
         return
-    models_info = {m.identifier: m.to_dict() for m in llama_stack_api.client.models.list()}
+    models_info = {m.id: m.to_dict() for m in llama_stack_api.client.models.list()}
 
     # Let user select and view a model
     selected_model = st.selectbox("Select a model", list(models_info.keys()))
