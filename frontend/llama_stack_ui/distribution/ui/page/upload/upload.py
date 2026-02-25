@@ -47,13 +47,13 @@ def _build_dropdown_options(vdb_list):
     """Build dropdown options from the vector database list.
 
     Returns:
-        tuple: (dropdown_options, create_new_option)
+        tuple: (create_new_option, dropdown_options)
     """
     create_new_option = "➕ Create New"
 
     if vdb_list:
         existing_vdbs = [get_vector_db_name(v) for v in vdb_list]
-        return existing_vdbs + [create_new_option], create_new_option
+        return [create_new_option] + existing_vdbs, create_new_option
 
     return [create_new_option], create_new_option
 
@@ -207,7 +207,7 @@ def _show_document_upload_ui(vector_db_name, vector_db_obj=None):
     uploaded_files = st.file_uploader(
         "Browse and select files to upload (files will upload automatically)",
         accept_multiple_files=True,
-        type=["txt", "pdf", "doc", "docx"],
+        type=["txt", "pdf", "doc", "docx", "md"],
         key=f"uploader_{vector_db_name}",
         help=(
             "Select one or more documents - they will be uploaded "

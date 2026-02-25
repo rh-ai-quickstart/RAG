@@ -111,22 +111,32 @@ def get_suggestions_for_databases(selected_dbs, all_vector_dbs):
     if not suggestions_map:
         return []
 
-    # Create a mapping from vector_db_name to id
-    db_name_to_id = {
-        get_vector_db_name(vdb): vdb.id
+    # Build a mapping from displayed DB name to the full DB object so we can
+    # resolve all possible identifiers used by different backend versions.
+    db_name_to_obj = {
+        get_vector_db_name(vdb): vdb
         for vdb in all_vector_dbs
     }
 
     for db_name in selected_dbs:
-        # Get the id for this database name
-        db_id = db_name_to_id.get(db_name)
+        # Try several keys because the selected UI name may differ from the
+        # suggestion map key (e.g. vector_store_name/identifier/id/display name).
+        vdb = db_name_to_obj.get(db_name)
+        candidate_keys = []
+        if vdb:
+            candidate_keys.extend([
+                getattr(vdb, "vector_store_name", None),
+                getattr(vdb, "identifier", None),
+                getattr(vdb, "id", None),
+                getattr(vdb, "name", None),
+            ])
+        candidate_keys.append(db_name)
 
-        # Try both the id and the db_name as keys in the suggestions map
         questions = None
-        if db_id and db_id in suggestions_map:
-            questions = suggestions_map[db_id]
-        elif db_name in suggestions_map:
-            questions = suggestions_map[db_name]
+        for key in candidate_keys:
+            if key and key in suggestions_map:
+                questions = suggestions_map[key]
+                break
 
         if questions:
             for question in questions:

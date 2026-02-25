@@ -75,7 +75,8 @@ def fetch_models_and_tools():
 
     # Fetch models
     models = client.models.list()
-    model_list = [model.identifier for model in models if model.api_model_type == "llm"]
+    model_list = [model.id for model in models if model.custom_metadata.get("model_type") == "llm"]
+    
 
     # Fetch and categorize toolgroups
     tool_groups = client.toolgroups.list()
@@ -246,6 +247,18 @@ def render_sidebar_configuration(model_list, builtin_tools_list, mcp_tools_list)
         on_change=reset_agent,
         help="Controls randomness. Higher values = more random.",
     )
+    top_k = st.slider(
+        "Top K",
+        1, 50, 5, 1,
+        on_change=reset_agent,
+        help="Number of documents retrieved per vector store in Direct mode.",
+    )
+    max_tokens = st.slider(
+        "Max Tokens",
+        1, 4096, 512, 64,
+        on_change=reset_agent,
+        help="Maximum number of tokens to generate.",
+    )
     max_infer_iters = st.slider(
         "Max Inference Iterations",
         1, 50, 10, 1,
@@ -270,7 +283,9 @@ def render_sidebar_configuration(model_list, builtin_tools_list, mcp_tools_list)
         'selected_vector_dbs': selected_vector_dbs,
         'toolgroup_selection': toolgroup_selection,
         'temperature': temperature,
+        'top_k': top_k,
         'max_infer_iters': max_infer_iters,
+        'max_tokens': max_tokens,
         'system_prompt': system_prompt,
     }
 
@@ -344,7 +359,9 @@ def initialize_session_state():
 class SamplingParams:
     """Sampling parameters for model inference."""
     temperature: float
+    top_k: int
     max_infer_iters: int
+    max_tokens: int
 
 
 @dataclass
@@ -556,7 +573,9 @@ def tool_chat_page():
         selected_vector_dbs=sidebar_config['selected_vector_dbs'],
         sampling=SamplingParams(
             temperature=sidebar_config['temperature'],
-            max_infer_iters=sidebar_config['max_infer_iters']
+            top_k=sidebar_config['top_k'],
+            max_infer_iters=sidebar_config['max_infer_iters'],
+            max_tokens=sidebar_config['max_tokens'],
         )
     )
 

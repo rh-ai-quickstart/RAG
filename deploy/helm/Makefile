@@ -26,6 +26,7 @@ POSTGRES_DBNAME ?= rag_blueprint
 MINIO_USER ?= minio_rag_user
 MINIO_PASSWORD ?= minio_rag_password
 # HF_TOKEN will be managed by the get_hf_token helper function
+INTERACTIVE ?= true
 RAG_CHART := rag
 TOLERATIONS_TEMPLATE=[{"key":"$(1)","effect":"NoSchedule","operator":"Exists"}]
 
@@ -40,6 +41,7 @@ define check_values_file
 			echo -e "$(YELLOW)[INFO]$(NC) Values file not found. Creating from example..."; \
 			cp "$(VALUES_EXAMPLE)" "$(VALUES_FILE)"; \
 			if [ -z "$(LLM)" ]; then \
+			if [ "$(INTERACTIVE)" = "true" ]; then \
 				echo -e ""; \
 				echo -e "$(GREEN)╔══════════════════════════════════════════════════════════════════════════╗$(NC)"; \
 				echo -e "$(GREEN)║                                                                          ║$(NC)"; \
@@ -69,6 +71,9 @@ define check_values_file
 				read -p "" continue; \
 				echo -e "$(BLUE)[INFO]$(NC) Continuing with installation..."; \
 				echo -e ""; \
+			else \
+				echo -e "$(YELLOW)[INFO]$(NC) Non-interactive mode: skipping configuration prompt. Using $(VALUES_FILE) as-is."; \
+			fi; \
 			else \
 				echo -e "$(GREEN)[SUCCESS]$(NC) Using LLM model from command line: $(LLM)"; \
 				echo -e ""; \
@@ -103,33 +108,41 @@ define validate_values_file
 	LLAMA_STACK_TAVILY=$$(grep "TAVILY_SEARCH_API_KEY:" "$(VALUES_FILE)" 2>/dev/null | sed 's/.*TAVILY_SEARCH_API_KEY: *//' | tr -d '"' | tr -d ' '); \
 	\
 	if [ -z "$$HF_TOKEN_FILE" ] || [ "$$HF_TOKEN_FILE" = "" ]; then \
-		echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Model downloads may fail."; \
-		echo -e "$(BLUE)[INFO]$(NC) Get your token from: https://huggingface.co/settings/tokens"; \
-		echo -e ""; \
-		read -p "Enter your Hugging Face token (or press Enter to skip): " hf_input; \
-		if [ -n "$$hf_input" ]; then \
-			sed -i.bak "/^llm-service:/,/^[^ ]/ s|hf_token:.*|hf_token: \"$$hf_input\"|" "$(VALUES_FILE)"; \
-			echo -e "$(GREEN)[SUCCESS]$(NC) Hugging Face token saved to configuration."; \
-			UPDATED=1; \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Model downloads may fail."; \
+			echo -e "$(BLUE)[INFO]$(NC) Get your token from: https://huggingface.co/settings/tokens"; \
+			echo -e ""; \
+			read -p "Enter your Hugging Face token (or press Enter to skip): " hf_input; \
+			if [ -n "$$hf_input" ]; then \
+				sed -i.bak "/^llm-service:/,/^[^ ]/ s|hf_token:.*|hf_token: \"$$hf_input\"|" "$(VALUES_FILE)"; \
+				echo -e "$(GREEN)[SUCCESS]$(NC) Hugging Face token saved to configuration."; \
+				UPDATED=1; \
+			else \
+				echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token not provided. Model downloads may fail."; \
+			fi; \
+			echo -e ""; \
 		else \
-			echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token not provided. Model downloads may fail."; \
+			echo -e "$(YELLOW)[WARNING]$(NC) Hugging Face token is not set. Use HF_TOKEN env var or set it in $(VALUES_FILE)."; \
 		fi; \
-		echo -e ""; \
 	fi; \
 	\
 	if [ -z "$$LLAMA_STACK_TAVILY" ] || [ "$$LLAMA_STACK_TAVILY" = "Paste-your-key-here" ]; then \
-		echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Web search will be disabled."; \
-		echo -e "$(BLUE)[INFO]$(NC) Get your key from: https://tavily.com/"; \
-		echo -e ""; \
-		read -p "Enter your TAVILY search API key (or press Enter to skip): " tavily_input; \
-		if [ -n "$$tavily_input" ]; then \
-			sed -i.bak "s/TAVILY_SEARCH_API_KEY:.*/TAVILY_SEARCH_API_KEY: \"$$tavily_input\"/" "$(VALUES_FILE)"; \
-			echo -e "$(GREEN)[SUCCESS]$(NC) TAVILY search API key saved to configuration."; \
-			UPDATED=1; \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Web search will be disabled."; \
+			echo -e "$(BLUE)[INFO]$(NC) Get your key from: https://tavily.com/"; \
+			echo -e ""; \
+			read -p "Enter your TAVILY search API key (or press Enter to skip): " tavily_input; \
+			if [ -n "$$tavily_input" ]; then \
+				sed -i.bak "s/TAVILY_SEARCH_API_KEY:.*/TAVILY_SEARCH_API_KEY: \"$$tavily_input\"/" "$(VALUES_FILE)"; \
+				echo -e "$(GREEN)[SUCCESS]$(NC) TAVILY search API key saved to configuration."; \
+				UPDATED=1; \
+			else \
+				echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key not provided. Web search will be disabled."; \
+			fi; \
+			echo -e ""; \
 		else \
-			echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key not provided. Web search will be disabled."; \
+			echo -e "$(YELLOW)[WARNING]$(NC) TAVILY search API key is not set. Use TAVILY_API_KEY env var or set it in $(VALUES_FILE)."; \
 		fi; \
-		echo -e ""; \
 	fi; \
 	\
 	if [ $$UPDATED -eq 1 ]; then \
@@ -212,7 +225,8 @@ help: ## Show this help message
 	@echo -e "  health        - Check health of all services"
 	@echo -e ""
 	@echo -e "$(GREEN)Development Targets:$(NC)"
-	@echo -e "  dev           - Start development environment"
+	@echo -e "  dev-start     - Install (if needed), port-forward, and start Streamlit locally"
+	@echo -e "  dev-stop      - Stop Streamlit & port-forwards, optionally uninstall"
 	@echo -e "  validate      - Validate Helm chart"
 	@echo -e "  validate-config - Validate configuration values"
 	@echo -e "  monitor       - Monitor deployment status"
@@ -244,6 +258,7 @@ help: ## Show this help message
 	@echo -e "  SAFETY_URL    - URL for remote safety service"
 	@echo -e "  LLM_API_TOKEN - API token for remote LLM service"
 	@echo -e "  SAFETY_API_TOKEN - API token for remote safety service"
+	@echo -e "  INTERACTIVE   - Enable interactive prompts (default: true, set false to skip)"
 	@echo -e ""
 	@echo -e "$(GREEN)Quick Start:$(NC)"
 	@echo -e "  $(BLUE)Option 1:$(NC) Using values file (recommended)"
@@ -251,8 +266,11 @@ help: ## Show this help message
 	@echo -e "    2. make configure-keys  # Set up API keys interactively"
 	@echo -e "    3. make install NAMESPACE=my-rag  # Install with your config"
 	@echo -e ""
-	@echo -e "  $(BLUE)Option 2:$(NC) Using command-line parameters"
+	@echo -e "  $(BLUE)Option 2:$(NC) Using command-line parameters with LLM provisioning on OpenShift AI"
 	@echo -e "    make install NAMESPACE=my-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION=\"nvidia.com/gpu\""
+	@echo -e ""
+	@echo -e "  $(BLUE)Option 3:$(NC) Using command-line parameters with remote LLM"
+	@echo -e "    make install NAMESPACE=my-rag LLM=remote-llm LLM_URL=https://<<llm-url>>/v1 LLM_API_TOKEN=<<llm-api-token>>"
 
 # Dependency checks
 .PHONY: check-deps
@@ -337,15 +355,80 @@ namespace:
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Namespace $(NAMESPACE) is ready"
 
 # Development targets
-.PHONY: dev
-dev: ## Start development environment
+FRONTEND_DIR := ../../frontend
+LLAMASTACK_LOCAL_PORT ?= 8321
+PGVECTOR_LOCAL_PORT ?= 5432
+
+.PHONY: dev-start
+dev-start: ## Install (if needed), port-forward, and start Streamlit locally
 	@if [ -z "$(NAMESPACE)" ]; then echo -e "$(RED)[ERROR]$(NC) NAMESPACE is required for dev"; exit 1; fi
 	@$(MAKE) check-deps
-	@$(MAKE) validate-config
-	@echo -e "$(BLUE)[INFO]$(NC) Starting RAG development environment..."
-	@$(call check_values_file)
-	@$(MAKE) install
-	@echo -e "$(GREEN)[SUCCESS]$(NC) Development environment started"
+	@if [ ! -d "$(FRONTEND_DIR)" ]; then echo -e "$(RED)[ERROR]$(NC) Frontend directory not found at $(FRONTEND_DIR)"; exit 1; fi
+	@if helm status $(RAG_CHART) -n $(NAMESPACE) >/dev/null 2>&1; then \
+		echo -e "$(YELLOW)[INFO]$(NC) RAG is already installed in namespace $(NAMESPACE)."; \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			read -p "Do you want to reinstall? [y/N] " answer; \
+			if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+				echo -e "$(BLUE)[INFO]$(NC) Reinstalling..."; \
+				$(MAKE) install NAMESPACE=$(NAMESPACE); \
+			else \
+				echo -e "$(BLUE)[INFO]$(NC) Skipping reinstall. Using existing deployment."; \
+			fi; \
+		else \
+			echo -e "$(BLUE)[INFO]$(NC) Non-interactive mode: skipping reinstall."; \
+		fi; \
+	else \
+		echo -e "$(BLUE)[INFO]$(NC) RAG is not installed in namespace $(NAMESPACE). Installing..."; \
+		$(MAKE) install NAMESPACE=$(NAMESPACE); \
+	fi
+	@echo -e ""
+	@echo -e "$(BLUE)[INFO]$(NC) Setting up port-forwards..."
+	@-pkill -f "oc port-forward.*svc/llamastack" 2>/dev/null ||:
+	@-pkill -f "oc port-forward.*svc/pgvector" 2>/dev/null ||:
+	@sleep 1
+	@echo -e "$(BLUE)[INFO]$(NC) Port-forwarding llamastack (localhost:$(LLAMASTACK_LOCAL_PORT) -> 8321)..."
+#@oc port-forward svc/llamastack $(LLAMASTACK_LOCAL_PORT):8321 -n $(NAMESPACE) &>/dev/null &
+	@echo -e "$(BLUE)[INFO]$(NC) Port-forwarding pgvector (localhost:$(PGVECTOR_LOCAL_PORT) -> 5432)..."
+# @oc port-forward svc/pgvector $(PGVECTOR_LOCAL_PORT):5432 -n $(NAMESPACE) &>/dev/null &
+	@sleep 2
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Port-forwards active:"
+	@echo -e "  llama-stack: http://localhost:$(LLAMASTACK_LOCAL_PORT)"
+	@echo -e "  pgvector:    localhost:$(PGVECTOR_LOCAL_PORT)"
+	@echo -e ""
+	@echo -e "$(BLUE)[INFO]$(NC) Loading suggested questions from ConfigMap..."
+	@SUGGESTED_QUESTIONS_JSON=$$(oc get configmap "$(RAG_CHART)-suggested-questions" -n $(NAMESPACE) -o jsonpath='{.data.RAG_QUESTION_SUGGESTIONS}' 2>/dev/null || true); \
+	if [ -n "$$SUGGESTED_QUESTIONS_JSON" ]; then \
+		echo -e "$(GREEN)[SUCCESS]$(NC) Loaded RAG_QUESTION_SUGGESTIONS from ConfigMap."; \
+	else \
+		echo -e "$(YELLOW)[WARNING]$(NC) Suggested questions ConfigMap not found; using empty suggestions."; \
+		SUGGESTED_QUESTIONS_JSON='{}'; \
+	fi; \
+	echo -e "$(BLUE)[INFO]$(NC) Starting Streamlit application..."; \
+	cd $(FRONTEND_DIR) && \
+	LLAMA_STACK_ENDPOINT=http://localhost:$(LLAMASTACK_LOCAL_PORT) \
+	RAG_QUESTION_SUGGESTIONS="$$SUGGESTED_QUESTIONS_JSON" \
+	bash start.sh
+
+.PHONY: dev-stop
+dev-stop: ## Stop Streamlit, port-forwards, and optionally uninstall
+	@echo -e "$(BLUE)[INFO]$(NC) Stopping Streamlit application..."
+	@-pkill -f "streamlit run" 2>/dev/null ||:
+	@echo -e "$(BLUE)[INFO]$(NC) Stopping port-forwards..."
+	@-pkill -f "oc port-forward.*svc/llamastack" 2>/dev/null ||:
+	@-pkill -f "oc port-forward.*svc/pgvector" 2>/dev/null ||:
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Local dev environment stopped."
+	@if [ -n "$(NAMESPACE)" ] && helm status $(RAG_CHART) -n $(NAMESPACE) >/dev/null 2>&1; then \
+		if [ "$(INTERACTIVE)" = "true" ]; then \
+			read -p "Do you want to uninstall RAG from namespace $(NAMESPACE)? [y/N] " answer; \
+			if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+				$(MAKE) uninstall NAMESPACE=$(NAMESPACE); \
+			else \
+				echo -e "$(BLUE)[INFO]$(NC) RAG deployment left running in $(NAMESPACE)."; \
+			fi; \
+		else \
+			echo -e "$(BLUE)[INFO]$(NC) Non-interactive mode: RAG deployment left running in $(NAMESPACE)."; \
+		fi; \
+	fi
 
 # Validation targets
 .PHONY: validate

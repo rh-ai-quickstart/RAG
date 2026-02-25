@@ -100,14 +100,16 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | Generation  | `meta-llama/Meta-Llama-3-70B-Instruct` | A100 x2/HPU | p4d.24xlarge
 | Safety      | `meta-llama/Llama-Guard-3-8B`          | L4/HPU      | g6.2xlarge
 
-- Note: Developers can also configure a remote LLM by modifying the `rag_values.yml` file, which gives you complete control over all parameter settings.
+- Note: Developers can also use a remote LLM via the command line (see [Remote LLM Deployment](#remote-llm-deployment-example)) or by modifying the `rag-values.yaml` file directly:
 
 ```yaml
-  remote-llm:
-    id: llama-3-3-70b-instruct-w8a8
-    url: https://somedomain.com/v1
-    apiToken: fake-token
-    enabled: true
+  global:
+    models:
+      remote-llm:
+        id: meta-llama/Llama-3.3-70B-Instruct
+        url: https://somedomain.com/v1
+        apiToken: fake-token
+        enabled: true
 ```
 
 Note: the 70B model is NOT required for initial testing of this example. The safety/shield model `Llama-Guard-3-8B` is also optional.
@@ -250,6 +252,25 @@ make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-gu
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-guard-3-8b DEVICE=xeon
 
 ```
+
+**Remote LLM Deployment Example:**
+
+To connect to a remote LLM endpoint instead of deploying a local model, use `LLM_URL` and `LLM_API_TOKEN`:
+
+```bash
+make install NAMESPACE=llama-stack-rag \
+  LLM=remote-llm \
+  LLM_URL=https://my-model-endpoint.example.com/v1 \
+  LLM_API_TOKEN=my-api-token
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `LLM=remote-llm` | Indicates a remote model (no local vLLM deployment) |
+| `LLM_URL` | The base URL of the remote model endpoint |
+| `LLM_API_TOKEN` | Authentication token for the remote endpoint |
+
+This skips local model deployment and configures LlamaStack to use the remote inference endpoint directly. No GPU or HF token is required for the LLM.
 
 When prompted, enter your **[Hugging Face Token](https://huggingface.co/settings/tokens)**.
 
