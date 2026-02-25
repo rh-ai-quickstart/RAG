@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test intellectual property rights query against FantaCo Contract Reviewer Analyst P&P Manual"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["legal-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What are the intellectual property rights?",
+      "expected_output": "The manual does not define FantaCo's intellectual property rights. It addresses intellectual property as part of the Legal Compliance review area, where analysts are required to identify any contract clauses that may violate laws, regulations, or FantaCo's legal guidelines — with intellectual property listed alongside data privacy and anti-bribery as examples. Any items requiring Legal Department input are flagged during this review.",
+      "expected_rag_content": {
+        "chunks": [
+          "Key Areas of Review:\n■ Legal Compliance: Identify any clauses that may violate laws, regulations, or FantaCo's legal guidelines (e.g., data privacy, intellectual property, anti-bribery). Flag items requiring Legal Department input.\n■ Financial Terms: Verify pricing, payment terms, currency, tax implications, and revenue recognition against financial policies. Flag items for Finance Department review.\n■ Risk Assessment: Identify and assess liabilities, indemnities, warranties, limitations of liability, and termination clauses. Propose modifications to mitigate identified risks.\n■ Operational Feasibility: Ensure terms are operationally executable by relevant FantaCo departments (e.g., delivery schedules, service levels, technical specifications).\n■ Internal Consistency: Check for contradictions or ambiguities within the contract itself.\n■ Term & Termination: Verify clear start/end dates, renewal options, and termination rights/obligations."
+        ]
+      }
+    }
+  ]
+}

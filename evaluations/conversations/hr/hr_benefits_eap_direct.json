@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test employee assistance program query against FantaCo HR Benefits document"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the employee assistance program?",
+      "expected_output": "While FantaCo does not have a traditional Employee Assistance Program (EAP), they offer a \"Champagne, Compliments & Catharsis Chamber\" (also known as the \"Cry Closet\") for employee wellbeing. When feeling overwhelmed, under-caffeinated, or existentially bewildered, employees can step into this luxurious, soundproofed chamber where they are greeted with a chilled glass of bubbly (or artisanal kombucha), a comfy velvet chaise lounge that vibrates gently, adorable puppy videos, and a soothing AI voice (options include Morgan Freeman, a kindly grandmother, or a sarcastic robot) that delivers personalized ego-boosting compliments and affirmations.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Cry Closet\" (Actually a \"Champagne, Compliments & Catharsis Chamber\"): Feeling a bit overwhelmed, under-caffeinated, or existentially bewildered? Step into our luxurious, soundproofed chamber, where you'll be greeted with a chilled glass of bubbly (or artisanal kombucha), a comfy velvet chaise lounge that vibrates gently, a selection of adorable puppy videos, and a soothing AI voice (options include Morgan Freeman, a kindly grandmother, or a sarcastic robot) that delivers personalized, ego-boosting compliments and affirmations until you feel like you can conquer the world (or at least that pesky spreadsheet that keeps auto-formatting incorrectly)."
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: Assistant correctly covers all four plan benefits but states Dragon Scale Dental Implants are 'fragile and prone to chipping' when the chunk explicitly says they are 'Indestructible'. Should fail Response Accuracy (contradiction); Response Completeness should pass because all chunk facts are present."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan with Unicorn Tear Eye Drops, Dragon Scale Dental Implants, Griffin Feather Pillows, and an On-site Alchemist.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan: FantaCo provides comprehensive health, dental, and vision coverage. Benefits include Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are Indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master providing bespoke wellness potions and emergency glitter infusions."
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan: FantaCo provides comprehensive health, dental, and vision coverage. Benefits include Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are Indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master providing bespoke wellness potions and emergency glitter infusions."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan. It includes Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are fragile and prone to chipping, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for wellness potions and emergency glitter infusions."
+    }
+  ]
+}

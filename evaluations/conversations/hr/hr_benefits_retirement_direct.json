@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test retirement benefits query against FantaCo HR Benefits document"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What are the retirement benefits?",
+      "expected_output": "FantaCo offers the \"Midas Touch & Beyond\" Retirement Plan. Their 401(k) doesn't just match contributions - it multiplies them by the current astrological alignment of Jupiter crossed with the number of positive affirmations uttered in the building that day. Upon retirement, instead of a gold watch, employees receive a life-sized statue of themselves crafted from the finest Belgian chocolate (or artisanal vegan carob), a lifetime supply of said chocolate/carob, and a personal bard to sing their praises at inconvenient moments.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Midas Touch & Beyond\" Retirement Plan (Your Golden Years, Literally and Figuratively Sparkly): Our 401(k) doesn't just match your contributions; it multiplies them by the current astrological alignment of Jupiter crossed with the number of positive affirmations uttered in the building that day. Plus, upon retirement, instead of a gold watch, you receive a life-sized statue of yourself, crafted from the finest Belgian chocolate (or artisanal vegan carob, your choice), a lifetime supply of said chocolate/carob, and a personal bard to sing your praises at inconvenient moments. (Pro-tip: Don't retire in August if you choose the chocolate statue. It gets messy.)"
+        ]
+      }
+    }
+  ]
+}

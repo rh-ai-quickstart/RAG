@@ -181,6 +181,8 @@ helm_llm_service_args = \
 helm_llama_stack_args = \
     $(if $(LLM),--set global.models.$(LLM).enabled=true,) \
     $(if $(SAFETY),--set global.models.$(SAFETY).enabled=true,) \
+    $(if $(LLM_ID),--set global.models.$(LLM).id='$(LLM_ID)',) \
+    $(if $(SAFETY_ID),--set global.models.$(SAFETY).id='$(SAFETY_ID)',) \
     $(if $(LLM_URL),--set global.models.$(LLM).url='$(LLM_URL)',) \
     $(if $(SAFETY_URL),--set global.models.$(SAFETY).url='$(SAFETY_URL)',) \
     $(if $(LLM_API_TOKEN),--set global.models.$(LLM).apiToken='$(LLM_API_TOKEN)',) \
@@ -232,6 +234,8 @@ help: ## Show this help message
 	@echo -e "$(GREEN)Command-Line Parameters (override values file):$(NC)"
 	@echo -e "  LLM           - Enable specific LLM model (e.g., llama-3-2-3b-instruct)"
 	@echo -e "  SAFETY        - Enable specific safety model (e.g., llama-guard-3-8b)"
+	@echo -e "  LLM_ID        - Model ID for LLM (required for remote models)"
+	@echo -e "  SAFETY_ID     - Model ID for safety model (required for remote models)"
 	@echo -e "  LLM_TOLERATION - Set toleration for LLM model (e.g., nvidia.com/gpu)"
 	@echo -e "  SAFETY_TOLERATION - Set toleration for safety model"
 	@echo -e "  DEVICE        - Set device type: cpu, gpu, hpu or xeon (default: gpu)"
@@ -493,6 +497,10 @@ install: ## Install the RAG deployment
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].effect=NoSchedule"; \
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).tolerations[0].operator=Exists"; \
 		fi; \
+		if [ -n "$(LLM_ID)" ]; then \
+			echo -e "$(BLUE)[INFO]$(NC) Setting LLM ID: $(LLM_ID)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).id=$(LLM_ID)"; \
+		fi; \
 		if [ -n "$(LLM_URL)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting LLM URL: $(LLM_URL)"; \
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(LLM).url=$(LLM_URL)"; \
@@ -510,6 +518,10 @@ install: ## Install the RAG deployment
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).tolerations[0].key=$(SAFETY_TOLERATION)"; \
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).tolerations[0].effect=NoSchedule"; \
 			HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).tolerations[0].operator=Exists"; \
+		fi; \
+		if [ -n "$(SAFETY_ID)" ]; then \
+			echo -e "$(BLUE)[INFO]$(NC) Setting SAFETY ID: $(SAFETY_ID)"; \
+			HELM_ARGS="$$HELM_ARGS --set global.models.$(SAFETY).id=$(SAFETY_ID)"; \
 		fi; \
 		if [ -n "$(SAFETY_URL)" ]; then \
 			echo -e "$(BLUE)[INFO]$(NC) Setting SAFETY URL: $(SAFETY_URL)"; \

@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: Assistant correctly covers all four plan benefits and adds a 'free annual health retreat' which IS present in actual_rag_content but NOT in expected_rag_content. Stage 1 Response Accuracy fails because Stage 1 uses expected_rag_content (which has no health retreat) as retrieval context. Stage 2 Faithfulness passes because the health retreat IS in actual_rag_content. Chunk Alignment is an expected secondary failure because actual has an extra health retreat chunk not in expected."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan with Unicorn Tear Eye Drops, Dragon Scale Dental Implants, Griffin Feather Pillows, and an On-site Alchemist.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan: FantaCo provides comprehensive health, dental, and vision coverage. Benefits include Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master providing bespoke wellness potions and emergency glitter infusions."
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan: FantaCo provides comprehensive health, dental, and vision coverage. Benefits include Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master providing bespoke wellness potions and emergency glitter infusions.",
+          "Annual Health Retreat: All employees covered by the health plan are entitled to a free annual health retreat at a luxury wellness spa, fully covered by the plan."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan. It includes Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for wellness potions. Employees are also entitled to a free annual health retreat at a luxury wellness spa, fully covered by the plan."
+    }
+  ]
+}
