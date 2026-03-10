@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rag
+  namespace: argocd
+  
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rh-ai-quickstart/RAG.git
+    targetRevision: dev
+    path: deploy/helm/rag
+    helm:
+      parameters:
+        - name: llm-service.secret.hf_token
+          value: "${HUGGING_FACE_TOKEN}"
+        - name: llama-stack.secrets.TAVILY_SEARCH_API_KEY
+          value: "${TAVILY_SEARCH_API_KEY}"
+        - name: global.models.remotellm.enabled
+          value: "true"
+        - name: global.models.remotellm.apiToken
+          value: "${LLM_API_TOKEN}"
+        - name: global.models.remotellm.url
+          value: "${LLM_URL}"
+        - name: global.models.remotellm.id
+          value: "${LLM_MODEL_ID}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: "${NAMESPACE}"
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
