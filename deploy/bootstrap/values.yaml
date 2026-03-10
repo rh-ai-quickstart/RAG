@@ -25,7 +25,7 @@ rag:
     global:
       models:
         remotellm:
-          enabled: true
+          enabled: false
           apiToken: "paste-your-token-here"
           url: "paste-your-url-here"
           id: "paste-your-model-id-here"
