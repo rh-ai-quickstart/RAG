@@ -366,9 +366,6 @@ def agent_process_prompt(prompt, state, config):
         "max_output_tokens": config.sampling.max_tokens,
 
     }
-    logger.debug("************************************************")
-    logger.debug("Request Args: %s", request_kwargs)
-    logger.debug("************************************************")
 
     # Add tools if available
     if tools:
@@ -379,7 +376,7 @@ def agent_process_prompt(prompt, state, config):
         response = llama_stack_api.client.responses.create(**request_kwargs)
     except Exception as e:  # pylint: disable=broad-exception-caught
         st.error(f"❌ Error: {str(e)}")
-        logger.debug("Agent mode create() error: %s", e)
+        logger.error("Agent mode create() error: %s", e)
         return
 
     # Stream response and update UI
