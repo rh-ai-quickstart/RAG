@@ -25,19 +25,7 @@ spec:
         path: {{ .Values.rag.git.path }}
         helm:
           values: |
-            llm-service:
-              secret:
-                hf_token: {{ .Values.rag.huggingFaceToken | quote }}
-            llama-stack:
-              secrets:
-                TAVILY_SEARCH_API_KEY: {{ .Values.rag.tavilySearchApiKey | quote }}
-            global:
-              models:
-                remotellm:
-                  enabled: {{ .Values.rag.remotellm.enabled | quote }}
-                  apiToken: {{ .Values.rag.remotellm.apiToken | quote }}
-                  url: {{ .Values.rag.remotellm.url | quote }}
-                  id: {{ .Values.rag.remotellm.id | quote }}
+{{ toYaml .Values.rag.values | nindent 12 }}
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{ .Values.rag.namespace }}-{{- "{{" }} user {{- " }}" }}-{{ .Values.guid }}'
