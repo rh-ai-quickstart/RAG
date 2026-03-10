@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "description": "Test benefits enrollment query against FantaCo HR Benefits document"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "How do I enroll in benefits?",
+      "expected_output": "The FantaCo HR Benefits document does not contain specific information about how to enroll in benefits. The document describes the various benefits available at FantaCo, including healthcare, vacation, retirement, and other perks, but does not outline an enrollment process or procedure.",
+      "expected_rag_content": {
+        "chunks": []
+      }
+    }
+  ]
+}

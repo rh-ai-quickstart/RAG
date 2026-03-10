@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test termination conditions query against FantaCo Contract Reviewer Analyst P&P Manual"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["legal-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "What are the termination conditions?",
+      "expected_output": "The manual addresses termination conditions as part of the contract review process. Under Term & Termination, analysts verify clear start/end dates, renewal options, and termination rights/obligations. Under Risk Assessment, termination clauses are identified and assessed alongside liabilities and indemnities, with proposed modifications to mitigate identified risks.",
+      "expected_rag_content": {
+        "chunks": [
+          "Key Areas of Review:\n■ Legal Compliance: Identify any clauses that may violate laws, regulations, or FantaCo's legal guidelines (e.g., data privacy, intellectual property, anti-bribery). Flag items requiring Legal Department input.\n■ Financial Terms: Verify pricing, payment terms, currency, tax implications, and revenue recognition against financial policies. Flag items for Finance Department review.\n■ Risk Assessment: Identify and assess liabilities, indemnities, warranties, limitations of liability, and termination clauses. Propose modifications to mitigate identified risks.\n■ Operational Feasibility: Ensure terms are operationally executable by relevant FantaCo departments (e.g., delivery schedules, service levels, technical specifications).\n■ Internal Consistency: Check for contradictions or ambiguities within the contract itself.\n■ Term & Termination: Verify clear start/end dates, renewal options, and termination rights/obligations."
+        ]
+      }
+    }
+  ]
+}

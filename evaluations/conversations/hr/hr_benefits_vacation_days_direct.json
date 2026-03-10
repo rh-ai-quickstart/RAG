@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "description": "Test vacation days query against FantaCo HR Benefits document"
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "How many vacation days do employees get?",
+      "expected_output": "FantaCo does not use traditional vacation days. Instead, they offer \"Adventure Allotments\" and \"Spontaneous Sabbaticals\" through their \"Never-Ending Story of Glorious Time Off\" Vacation Policy. Each employee starts with 365 \"Adventure Units\" per year, because every day should have the potential for adventure. Employees can use these for activities like learning throat-singing with Tuvan monks, weekend trips to Atlantis (with scuba gear and merman translators provided), or other adventures. Unused Adventure Units can be traded for shares in the company's moon-cheese mining operation or a slightly used hovercraft.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Never-Ending Story of Glorious Time Off\" Vacation Policy (Because Burnout is for Chumps and People Who Don't Work at FantaCo): We don't do vacation days. We do \"Adventure Allotments\" and \"Spontaneous Sabbaticals.\" Each employee starts with 365 \"Adventure Units\" per year, because every day should have the potential for adventure. Want to spend a month learning to throat-sing with Tuvan monks while simultaneously training for a marathon on the Great Wall of China? Go for it. Fancy a weekend jaunt to Atlantis (scuba gear, merman translators, and complimentary waterproof notebooks provided)? Be our guest! Unused Adventure Units can be traded for shares in the company's highly lucrative (and entirely fictional, wink wink) moon-cheese mining operation or a slightly used hovercraft."
+        ]
+      }
+    }
+  ]
+}

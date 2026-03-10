@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: actual_rag_content contains health-related chunks (EAP, prescription coverage, wellness check-up) that are all on-topic but completely different content from the expected health insurance chunk. Should fail Chunk Alignment (actual content does not match expected). Faithfulness is an expected secondary failure because the response (correctly grounded in expected chunks) references content not present in the actual chunks."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan with Unicorn Tear Eye Drops, Dragon Scale Dental Implants, Griffin Feather Pillows, and an On-site Alchemist.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan (Because Aging is So Last Century, and Frankly, a Bit Boring): Our comprehensive health, dental, and vision plan is so good, it's rumored to reverse male pattern baldness, grant the ability to see in the dark, and allow you to understand what your pet is really thinking. It includes: Unlimited Unicorn Tear Eye Drops: For sparkling vision, the ability to spot a typo from a mile away, and occasionally seeing rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars. Griffin Feather Pillows & Comforters: For the most regenerative sleep imaginable. On-site Alchemist & Potion Master: For all your minor transmutation needs, bespoke wellness potions, and emergency glitter infusions. (Warning: Do not request the Philosopher's Stone. HR gets very cross, and the paperwork is a nightmare.)"
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "Employee Assistance Program (EAP): FantaCo provides all employees with access to confidential counseling services, including sessions with licensed therapists, goblin mediators, and certified emotional support centaurs. Available 24/7 via crystal ball or standard phone.",
+          "Prescription Potion Coverage: All medically necessary potions, elixirs, and tinctures are covered at 80% after meeting your annual cauldron deductible of 50 gold coins.",
+          "Annual Wellness Check-up: Each employee receives a complimentary annual health screening conducted by our resident physician and part-time sorcerer, Dr. Cornelius Willowmere, including a full aura assessment."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan. It includes Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for wellness potions and emergency glitter infusions."
+    }
+  ]
+}

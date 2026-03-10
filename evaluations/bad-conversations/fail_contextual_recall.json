@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: actual_rag_content contains only vision and dental benefits (Unicorn Tear Eye Drops and Dragon Scale Dental Implants). The expected_rag_content contains the full plan (all four benefits). The expected_output references all four benefits, so ContextualRecall fails. The response is detailed for the two supported benefits and brief for the two unsupported ones, keeping Faithfulness above the threshold (most claims verifiable against actual). Chunk Alignment is an expected secondary failure because actual differs from expected."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo's healthcare plan includes Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for wellness potions.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan (Because Aging is So Last Century, and Frankly, a Bit Boring): Our comprehensive health, dental, and vision plan is so good, it's rumored to reverse male pattern baldness, grant the ability to see in the dark, and allow you to understand what your pet is really thinking. It includes: Unlimited Unicorn Tear Eye Drops: For sparkling vision, the ability to spot a typo from a mile away, and occasionally seeing rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars. Griffin Feather Pillows & Comforters: For the most regenerative sleep imaginable. On-site Alchemist & Potion Master: For all your minor transmutation needs, bespoke wellness potions, and emergency glitter infusions. (Warning: Do not request the Philosopher's Stone. HR gets very cross, and the paperwork is a nightmare.)"
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "FantaCo Healthcare Plan - Vision and Dental Benefits: Unlimited Unicorn Tear Eye Drops provide sparkling vision, granting the ability to spot a typo from a mile away and occasionally see rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo's healthcare plan includes Unlimited Unicorn Tear Eye Drops for sparkling vision—they let you spot a typo from a mile away and occasionally see rainbows where there are none. Dragon Scale Dental Implants are indestructible, pearly white, glow faintly in moonlight, and can open particularly stubborn pickle jars. The plan also provides Griffin Feather Pillows & Comforters and an On-site Alchemist & Potion Master."
+    }
+  ]
+}

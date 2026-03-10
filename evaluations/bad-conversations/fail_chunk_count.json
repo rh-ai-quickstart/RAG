@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "description": "KNOWN-BAD: actual_rag_content has 11 chunks, all relevant to the health insurance question, exceeding the max_chunks limit of 10. All Stage 1 and other Stage 2 metrics should pass (correct answer, all chunks on-topic); only ChunkCountMetric should fail."
+  },
+  "config": {
+    "mode": "direct",
+    "vector_dbs": ["hr-vector-db-v1-0"]
+  },
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What are the health insurance benefits offered?",
+      "expected_output": "FantaCo offers the \"Fountain of Youth & General Awesomeness\" Healthcare Plan with Unicorn Tear Eye Drops, Dragon Scale Dental Implants, Griffin Feather Pillows, and an On-site Alchemist & Potion Master.",
+      "expected_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan (Because Aging is So Last Century, and Frankly, a Bit Boring): Our comprehensive health, dental, and vision plan is so good, it's rumored to reverse male pattern baldness, grant the ability to see in the dark, and allow you to understand what your pet is really thinking. It includes: Unlimited Unicorn Tear Eye Drops: For sparkling vision, the ability to spot a typo from a mile away, and occasionally seeing rainbows where there are none. Dragon Scale Dental Implants: Indestructible, pearly white, they glow faintly in moonlight, and can be used to open particularly stubborn pickle jars. Griffin Feather Pillows & Comforters: For the most regenerative sleep imaginable. On-site Alchemist & Potion Master: For all your minor transmutation needs, bespoke wellness potions, and emergency glitter infusions. (Warning: Do not request the Philosopher's Stone. HR gets very cross, and the paperwork is a nightmare.)"
+        ]
+      },
+      "actual_rag_content": {
+        "chunks": [
+          "The \"Fountain of Youth & General Awesomeness\" Healthcare Plan: FantaCo provides comprehensive health, dental, and vision coverage. Benefits include Unlimited Unicorn Tear Eye Drops for sparkling vision, Dragon Scale Dental Implants that are indestructible and glow faintly in moonlight, Griffin Feather Pillows & Comforters for regenerative sleep, and an On-site Alchemist & Potion Master for bespoke wellness potions.",
+          "Vision Benefit: Unicorn Tear Eye Drops are included in the health insurance plan and are available in single-use vials or as a monthly subscription for all covered employees.",
+          "Dental Benefit: Dragon Scale Dental Implants are covered under the dental plan and come with a lifetime warranty against dragon-related damage, including moonlight polishing sessions twice a year.",
+          "Sleep Health Benefit: Griffin Feather Pillows & Comforters are provided as part of the health plan and are professionally laundered and replaced on an annual basis.",
+          "Wellness Potions Benefit: The On-site Alchemist provides over 200 certified wellness potions as part of health coverage, including clarity draughts and energy elixirs.",
+          "Employee Assistance Program (EAP): Confidential counseling and mental wellness services are available to all health plan members, including sessions with licensed therapists.",
+          "Annual Wellness Check-up: Each employee receives a complimentary annual health screening as part of the health insurance plan.",
+          "Prescription Coverage: All medically necessary potions, elixirs, and tinctures are covered at 80% of cost after the annual health plan deductible is met.",
+          "Emergency Health Coverage: Emergency medical response is guaranteed to restore employees to full health within 24 hours as part of the insurance plan.",
+          "Specialist Referrals: The health plan provides access to a network of over 500 certified specialist healers for referrals.",
+          "Mental Health Support: All health plan members have access to six free mental health counseling sessions per year, with specialist referrals available upon request."
+        ]
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "FantaCo offers comprehensive health benefits. The vision plan provides Unicorn Tear Eye Drops, available in single-use vials or as a monthly subscription. The dental plan includes Dragon Scale Dental Implants with a lifetime warranty and moonlight polishing sessions twice a year. Sleep health benefits include Griffin Feather Pillows and Comforters, laundered and replaced annually. The on-site alchemist provides over 200 certified wellness potions including clarity draughts and energy elixirs. Additional benefits include a confidential Employee Assistance Program with licensed therapist sessions, a complimentary annual health screening, prescription coverage at 80% after the annual deductible, emergency medical coverage restoring employees within 24 hours, access to over 500 certified specialist healers, and six free mental health counseling sessions per year."
+    }
+  ]
+}
