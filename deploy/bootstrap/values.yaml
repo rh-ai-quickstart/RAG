@@ -1,0 +1,24 @@
+# Default values for bootstrap.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+user:
+  count: 1
+  prefix: user
+
+guid: abcde
+
+# Set to empty to NOT create workspaces
+rag:
+  namespace: rag
+  git:
+    url: https://github.com/rh-ai-quickstart/RAG.git
+    revision: main
+    path: deploy/helm/rag
+  huggingFaceToken: ""
+  tavilySearchApiKey: "paste-your-key-here"
+  remotellm:
+    enabled: true
+    apiToken: "paste-your-token-here"
+    url: "paste-your-url-here"
+    id: "paste-your-model-id-here"
