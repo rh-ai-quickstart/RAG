@@ -17,6 +17,7 @@ rag:
     path: deploy/helm/rag
   values:
     llm-service:
+      enabled: false
       secret:
         hf_token: ""
     llama-stack:
