@@ -5,25 +5,22 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install uv first (rarely changes)
-RUN pip install uv
+# Install only runtime dependencies at build time.
+ENV PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Copy dependency file first (for better caching)
+# Copy dependency metadata first for better layer caching.
 COPY pyproject.toml ./
 
-# Install dependencies only (cached unless pyproject.toml changes)
-RUN uv pip install --system -r pyproject.toml
+# Install dependencies into system site-packages during build.
+RUN pip install --no-cache-dir uv && \
+    uv pip install --system -r pyproject.toml && \
+    pip uninstall -y uv && \
+    rm -rf /root/.cache/uv /root/.cache/pip
 
-# Copy application code (invalidates cache only on code changes)
+# Copy the rest of the application source.
 COPY . /app/
-
-# Set UV cache directory to a writable location
-ENV UV_CACHE_DIR=/app/.uv-cache
-ENV XDG_CACHE_HOME=/app/.cache
-
-# Create cache directories with proper permissions
-RUN mkdir -p /app/.uv-cache /app/.cache && \
-    chmod -R 777 /app/.uv-cache /app/.cache
 
 # Ensure all app files have proper ownership and permissions for non-root users
 RUN chown -R 1001:0 /app && \
@@ -31,4 +28,4 @@ RUN chown -R 1001:0 /app && \
 
 EXPOSE 8501
 
-ENTRYPOINT ["uv", "run", "streamlit", "run", "/app/llama_stack_ui/distribution/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["python", "-m", "streamlit", "run", "/app/llama_stack_ui/distribution/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
