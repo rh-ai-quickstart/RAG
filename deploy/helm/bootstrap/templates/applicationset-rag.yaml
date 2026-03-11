@@ -1,0 +1,44 @@
+{{ if .Values.rag -}}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: rag
+  namespace: {{ .Values.gitops.namespace }}
+spec:
+  generators:
+  - list:
+      elements:
+{{- $userCount := int .Values.user.count }}
+{{- range $index := until $userCount }}
+      - user: {{ $.Values.user.prefix }}{{ add $index 1}}
+{{- end }}
+  template:
+    metadata:
+      name: rag-{{- "{{" }} user {{- " }}" }}
+      namespace: {{ .Values.gitops.namespace }}
+    spec:
+      project: default
+      source:
+        repoURL: {{ .Values.rag.git.url }}
+        targetRevision: {{ .Values.rag.git.revision }}
+        path: {{ .Values.rag.git.path }}
+        helm:
+          values: |
+{{ toYaml .Values.rag.values | nindent 12 }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ .Values.rag.namespace }}-{{- "{{" }} user {{- " }}" }}-{{ .Values.guid }}'
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: false
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 30
+          backoff:
+            duration: "5s"
+            factor: 2
+            maxDuration: "5m"
+{{- end }}
