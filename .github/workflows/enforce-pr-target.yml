@@ -1,0 +1,48 @@
+name: Enforce PR Target Branch
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+jobs:
+  validate-target-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR base branch policy
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "Validating PR policy..."
+          echo "base=${BASE_REF} head=${HEAD_REF} actor=${ACTOR}"
+
+          # Standard development flow: PRs target dev.
+          if [ "${BASE_REF}" = "dev" ]; then
+            echo "OK: PR targets dev."
+            exit 0
+          fi
+
+          # Release flow: only GitHub Actions can open release/* PRs to main.
+          if [ "${BASE_REF}" = "main" ]; then
+            if [ "${ACTOR}" != "github-actions[bot]" ]; then
+              echo "ERROR: PRs to main are restricted to github-actions[bot]."
+              echo "Please open your PR against dev."
+              exit 1
+            fi
+
+            case "${HEAD_REF}" in
+              release/*)
+                echo "OK: Automated release PR to main."
+                exit 0
+                ;;
+              *)
+                echo "ERROR: Automated PRs to main must come from release/* branches."
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "ERROR: Invalid PR base branch '${BASE_REF}'."
+          echo "PRs must target dev. Only automated release PRs may target main."
+          exit 1
