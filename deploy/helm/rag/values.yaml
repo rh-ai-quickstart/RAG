@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: quay.io/rh-ai-quickstart/llamastack-dist-ui
   pullPolicy: Always
-  tag: 0.2.33
+  tag: latest-dev
 
 service:
   type: ClusterIP
@@ -16,11 +16,15 @@ livenessProbe:
   httpGet:
     path: /
     port: http
+  initialDelaySeconds: 60
+  timeoutSeconds: 15
 
 readinessProbe:
   httpGet:
     path: /
     port: http
+  initialDelaySeconds: 30
+  timeoutSeconds: 15
 
 env:
   - name: LLAMA_STACK_ENDPOINT
