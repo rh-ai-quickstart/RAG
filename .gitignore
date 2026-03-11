@@ -184,3 +184,5 @@ deploy/helm/secrets
 # User-specific configuration file (contains sensitive data)
 deploy/helm/rag-values.yaml
 deploy/helm/rag/Chart.lock
+deploy/helm/values.yaml
+deploy/helm/bootstrap-values.yaml

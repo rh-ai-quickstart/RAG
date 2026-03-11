@@ -8,6 +8,14 @@ user:
 
 guid: abcde
 
+gitops:
+  namespace: openshift-gitops
+  applicationControllerServiceAccount: openshift-gitops-argocd-application-controller
+
+rbac:
+  enabled: true
+  clusterRoleName: argocd-rag-bootstrap-manager
+
 # Set to empty to NOT create workspaces
 rag:
   namespace: rag
@@ -17,6 +25,7 @@ rag:
     path: deploy/helm/rag
   values:
     llm-service:
+      enabled: false
       secret:
         hf_token: ""
     llama-stack:
