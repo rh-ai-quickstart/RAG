@@ -2,18 +2,23 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-user:
-  count: 1
-  prefix: user
+deployer:
+  domain: "apps.cluster-guid.example.com"
+  apiUrl: "https://api.cluster-guid.example.com"
+  guid: "abcde"
 
-guid: abcde
+tenant:
+  name: "tenant-name" 
+  user:
+    name: "user-name"
+    password: "user-password"
 
 gitops:
   namespace: openshift-gitops
   applicationControllerServiceAccount: openshift-gitops-argocd-application-controller
 
 rbac:
-  enabled: true
+  enabled: false
   clusterRoleName: argocd-rag-bootstrap-manager
 
 # Set to empty to NOT create workspaces
