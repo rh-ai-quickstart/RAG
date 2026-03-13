@@ -363,8 +363,7 @@ def agent_process_prompt(prompt, state, config):
         "temperature": config.sampling.temperature,
         "max_infer_iters": config.sampling.max_infer_iters,
         "stream": True,
-       # "max_output_tokens": config.sampling.max_tokens,
-
+        "max_output_tokens": config.sampling.max_tokens,
     }
 
     # Add tools if available
