@@ -12,6 +12,7 @@ spec:
     targetRevision: {{ .Values.rag.git.revision }}
     path: {{ .Values.rag.git.path }}
     helm:
+      releaseName: "user-{{ .Values.tenant.name }}"
       values: |
 {{ toYaml .Values.rag.values | nindent 12 }}
   destination:
