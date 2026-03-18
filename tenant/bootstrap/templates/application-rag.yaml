@@ -29,4 +29,17 @@ spec:
         duration: "5s"
         factor: 2
         maxDuration: "5m"
+  ignoreDifferences:
+    - group: datasciencepipelinesapplications.opendatahub.io
+      kind: DataSciencePipelinesApplication
+      jsonPointers:
+        - /status
+    - group: kubeflow.org
+      kind: Notebook
+      jsonPointers:
+        - /status
+    - group: route.openshift.io
+      kind: Route
+      jsonPointers:
+        - /spec/host
 {{- end }}
