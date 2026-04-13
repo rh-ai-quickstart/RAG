@@ -87,8 +87,8 @@ def fetch_models_and_tools():
     # Fetch models, excluding guardrail/shield models
     models = client.models.list()
     model_list = [
-        model.identifier for model in models
-        if model.api_model_type == "llm" and model.identifier not in shields_set
+        model.id for model in models
+        if model.custom_metadata.get("model_type") == "llm" and model.id not in shields_set
     ]
 
     # Fetch and categorize toolgroups

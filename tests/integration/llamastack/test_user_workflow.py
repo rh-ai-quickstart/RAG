@@ -289,7 +289,7 @@ def test_complete_rag_workflow():
     
     try:
         # Llama-stack uses /v1/openai/v1/* paths for OpenAI-compatible API
-        openai_base_url = f"{LLAMA_STACK_ENDPOINT}/v1/openai/v1"
+        openai_base_url = f"{LLAMA_STACK_ENDPOINT}/v1"
         client = OpenAI(
             api_key="not_needed",
             base_url=openai_base_url,

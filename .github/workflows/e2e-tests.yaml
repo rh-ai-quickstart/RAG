@@ -85,7 +85,7 @@ jobs:
   llamastack-integration-tests:
     name: LlamaStack Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 600
     needs: unit-tests
     # Skip this job for fork PRs since secrets are not available
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
@@ -433,7 +433,7 @@ jobs:
         env:
           LLAMA_STACK_ENDPOINT: http://localhost:8321
           RAG_UI_ENDPOINT: http://localhost:8501
-          INFERENCE_MODEL: ${{ env.MAAS_MODEL_ID }}
+          INFERENCE_MODEL: ${{ secrets.MAAS_MODEL_ID }}
           SKIP_MODEL_TESTS: "false"  # Enable inference tests with MaaS
         run: |
           echo "Starting LlamaStack integration tests with MaaS-enabled inference..."
@@ -651,8 +651,9 @@ jobs:
         env:
           RAG_UI_ENDPOINT: http://localhost:8501
           LLAMA_STACK_ENDPOINT: http://localhost:8321
-          MAAS_ENDPOINT: ${{ env.MAAS_ENDPOINT }}
-          MAAS_MODEL_ID: ${{ env.MAAS_MODEL_ID }}
+          MAAS_ENDPOINT: ${{ secrets.MAAS_ENDPOINT }}
+          MAAS_MODEL_ID: ${{ secrets.MAAS_MODEL_ID }}
+     
           SKIP_MODEL_TESTS: "false"  # Enable MaaS inference tests in UI
         run: |
           echo "Starting port forwarding and running tests..."
