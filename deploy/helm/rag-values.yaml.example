@@ -103,7 +103,7 @@ global:
     # To configure LlamaStack with remote llm, replace the id,
     # url and apiToken value and set enabled to true
 
-    # remote-llm:
+    # remotellm:
     #   id: custom-model-id
     #   url: https://custom-server-url/v1
     #   apiToken: fake-token

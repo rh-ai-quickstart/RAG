@@ -269,7 +269,7 @@ Note: This process may take 10 to 30 minutes depending on the number and size of
 ```yaml
   global:
     models:
-      remote-llm:
+      remotellm:
         id: meta-llama/Llama-3.3-70B-Instruct
         url: https://llm-gateway.com/v1
         apiToken: api-token
