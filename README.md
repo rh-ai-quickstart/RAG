@@ -264,6 +264,18 @@ When prompted, enter your **[Hugging Face Token](https://huggingface.co/settings
 
 Note: This process may take 10 to 30 minutes depending on the number and size of models to be downloaded.
 
+- Note: Developers can also use a remote LLM via the helm chart (see [Remote LLM Deployment](#remote-llm-deployment-example)) or by modifying the `rag-values.yaml` file directly:
+
+```yaml
+  global:
+    models:
+      remote-llm:
+        id: meta-llama/Llama-3.3-70B-Instruct
+        url: https://llm-gateway.com/v1
+        apiToken: api-token
+        enabled: true
+```
+
 7. **Monitor Deployment**
 
 ```bash
