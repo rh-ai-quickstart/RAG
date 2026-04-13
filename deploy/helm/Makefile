@@ -270,7 +270,7 @@ help: ## Show this help message
 	@echo -e "    make install NAMESPACE=my-rag LLM=llama-3-2-3b-instruct LLM_TOLERATION=\"nvidia.com/gpu\""
 	@echo -e ""
 	@echo -e "  $(BLUE)Option 3:$(NC) Using command-line parameters with remote LLM"
-	@echo -e "    make install NAMESPACE=my-rag LLM=remote-llm LLM_URL=https://<<llm-url>>/v1 LLM_API_TOKEN=<<llm-api-token>>"
+	@echo -e "    make install NAMESPACE=my-rag LLM=remotellm LLM_URL=https://<<llm-url>>/v1 LLM_API_TOKEN=<<llm-api-token>>"
 
 # Dependency checks
 .PHONY: check-deps

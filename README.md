@@ -246,14 +246,14 @@ To connect to a remote LLM endpoint instead of deploying a local model, use `LLM
 
 ```bash
 make install NAMESPACE=llama-stack-rag \
-  LLM=remote-llm \
+  LLM=remotellm \
   LLM_URL=https://my-model-endpoint.example.com/v1 \
   LLM_API_TOKEN=my-api-token \
   LLM_ID=llm_model_id
 ```
 | Parameter | Description |
 |-----------|-------------|
-| `LLM=remote-llm` | Indicates a remote model (no local vLLM deployment) |
+| `LLM=remotellm` | Indicates a remote model (no local vLLM deployment) |
 | `LLM_URL` | The base URL of the remote model endpoint |
 | `LLM_API_TOKEN` | Authentication token for the remote endpoint |
 | `LLM_ID` | The model of the llm you wish to use |
