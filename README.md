@@ -100,18 +100,6 @@ This QuickStart allows users to explore the capabilities of RAG by:
 | Generation  | `meta-llama/Meta-Llama-3-70B-Instruct` | A100 x2/HPU | p4d.24xlarge
 | Safety      | `meta-llama/Llama-Guard-3-8B`          | L4/HPU      | g6.2xlarge
 
-- Note: Developers can also use a remote LLM via the command line (see [Remote LLM Deployment](#remote-llm-deployment-example)) or by modifying the `rag-values.yaml` file directly:
-
-```yaml
-  global:
-    models:
-      remote-llm:
-        id: meta-llama/Llama-3.3-70B-Instruct
-        url: https://somedomain.com/v1
-        apiToken: fake-token
-        enabled: true
-```
-
 Note: the 70B model is NOT required for initial testing of this example. The safety/shield model `Llama-Guard-3-8B` is also optional.
 
 ### Installation Steps
@@ -250,7 +238,6 @@ make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-gu
 
 # Xeon deployment
 make install NAMESPACE=llama-stack-rag LLM=llama-3-2-3b-instruct SAFETY=llama-guard-3-8b DEVICE=xeon
-
 ```
 
 **Remote LLM Deployment Example:**
@@ -261,14 +248,15 @@ To connect to a remote LLM endpoint instead of deploying a local model, use `LLM
 make install NAMESPACE=llama-stack-rag \
   LLM=remote-llm \
   LLM_URL=https://my-model-endpoint.example.com/v1 \
-  LLM_API_TOKEN=my-api-token
+  LLM_API_TOKEN=my-api-token \
+  LLM_ID=llm_model_id
 ```
-
 | Parameter | Description |
 |-----------|-------------|
 | `LLM=remote-llm` | Indicates a remote model (no local vLLM deployment) |
 | `LLM_URL` | The base URL of the remote model endpoint |
 | `LLM_API_TOKEN` | Authentication token for the remote endpoint |
+| `LLM_ID` | The model of the llm you wish to use |
 
 This skips local model deployment and configures LlamaStack to use the remote inference endpoint directly. No GPU or HF token is required for the LLM.
 
