@@ -166,17 +166,17 @@ pgvector:
     port: "5432"
   
   # Create a separate vector database for each ingestion pipeline
-  extraDatabases:
-    - name: hr_vector_db
-      vectordb: true
-    - name: legal_vector_db
-      vectordb: true
-    - name: sales_vector_db
-      vectordb: true
-    - name: procurement_vector_db
-      vectordb: true
-    - name: techsupport_vector_db
-      vectordb: true
+  # extraDatabases:
+  #   - name: hr_vector_db
+  #     vectordb: true
+  #   - name: legal_vector_db
+  #     vectordb: true
+  #   - name: sales_vector_db
+  #     vectordb: true
+  #   - name: procurement_vector_db
+  #     vectordb: true
+  #   - name: techsupport_vector_db
+  #     vectordb: true
 
     # Upload sample files to the minio bucket 
   sampleFileUpload:
