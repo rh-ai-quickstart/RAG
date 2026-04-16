@@ -28,6 +28,8 @@ MINIO_PASSWORD ?= minio_rag_password
 # HF_TOKEN will be managed by the get_hf_token helper function
 INTERACTIVE ?= true
 RAG_CHART := rag
+# Sibling checkout used by rag-deps-use-local-pipelines (override if your layout differs).
+AI_ARCHITECTURE_CHARTS_ROOT ?= $(abspath $(CURDIR)/../../../ai-architecture-charts)
 TOLERATIONS_TEMPLATE=[{"key":"$(1)","effect":"NoSchedule","operator":"Exists"}]
 
 # Values file management
@@ -229,6 +231,8 @@ help: ## Show this help message
 	@echo -e "  dev-stop      - Stop Streamlit & port-forwards, optionally uninstall"
 	@echo -e "  validate      - Validate Helm chart"
 	@echo -e "  validate-config - Validate configuration values"
+	@echo -e "  rag-deps-use-local-pipelines - Use local ai-architecture-charts for pipeline Helm deps"
+	@echo -e "  rag-deps-restore-remote - Restore Chart.yaml from backup after local-deps test"
 	@echo -e "  monitor       - Monitor deployment status"
 	@echo -e "  config        - Show current configuration"
 	@echo -e ""
@@ -550,6 +554,27 @@ depend: ## Update Helm dependencies
 	@echo -e "$(BLUE)[INFO]$(NC) Updating Helm dependencies..."
 	@helm dependency update $(RAG_CHART) &> /dev/null
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Helm dependencies updated"
+
+.PHONY: rag-deps-use-local-pipelines
+rag-deps-use-local-pipelines: check-deps ## Use sibling ai-architecture-charts for configure-pipeline + ingestion-pipeline (see rag/Chart.local.yaml)
+	@test -d "$(AI_ARCHITECTURE_CHARTS_ROOT)/ingestion-pipeline/helm" || { \
+		echo -e "$(RED)[ERROR]$(NC) Local charts not found at $(AI_ARCHITECTURE_CHARTS_ROOT)"; \
+		echo "Expected a checkout of rh-ai-quickstart/ai-architecture-charts next to the RAG repo, or set AI_ARCHITECTURE_CHARTS_ROOT to its root path."; \
+		exit 1; \
+	}
+	@cp "$(RAG_CHART)/Chart.yaml" "$(RAG_CHART)/Chart.yaml.remote.bak"
+	@cp "$(RAG_CHART)/Chart.local.yaml" "$(RAG_CHART)/Chart.yaml"
+	@echo -e "$(BLUE)[INFO]$(NC) Running helm dependency update with local pipeline charts (AI_ARCHITECTURE_CHARTS_ROOT=$(AI_ARCHITECTURE_CHARTS_ROOT))..."
+	@helm dependency update "$(RAG_CHART)"
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Local pipeline dependencies vendored into $(RAG_CHART)/charts. Restore upstream Chart with: $(BLUE)make rag-deps-restore-remote$(NC)"
+
+.PHONY: rag-deps-restore-remote
+rag-deps-restore-remote: check-deps ## Restore rag/Chart.yaml from Chart.yaml.remote.bak and refresh Helm dependencies
+	@test -f "$(RAG_CHART)/Chart.yaml.remote.bak" || { echo -e "$(RED)[ERROR]$(NC) No $(RAG_CHART)/Chart.yaml.remote.bak; run rag-deps-use-local-pipelines first."; exit 1; }
+	@cp "$(RAG_CHART)/Chart.yaml.remote.bak" "$(RAG_CHART)/Chart.yaml"
+	@echo -e "$(BLUE)[INFO]$(NC) Restoring remote Chart.yaml and updating dependencies..."
+	@helm dependency update "$(RAG_CHART)"
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Restored remote pipeline chart references."
 
 .PHONY: list-models
 list-models: depend ## List available models

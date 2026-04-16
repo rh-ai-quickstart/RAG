@@ -48,6 +48,29 @@ volumeMounts:
 # - Use DEVICE=hpu for Intel Gaudi HPU deployment (requires Intel Gaudi drivers and setup)
 # - Use DEVICE=xeon for Intel Xeon CPU deployment (optimized for large CPU instances, works on SPR/EMR/GNR, requires min 16vCPU and 32GB RAM to run efficiently)
 
+global:
+  models:
+    llama-3-8b-instruct:
+      id: meta-llama/Meta-Llama-3-8B-Instruct
+      enabled: true
+      resources:
+        limits:
+          cpu: "4"
+          memory: 32Gi
+        requests:
+          cpu: "1"
+          memory: 16Gi
+      args:
+        - --enable-auto-tool-choice
+        - --chat-template
+        - /chat-templates/tool_chat_template_llama3.2_json.jinja
+        - --tool-call-parser
+        - llama3_json
+        - --max-model-len
+        - "8192"
+        - --max-num-seqs
+        - "2"
+
 # global:
 #   models:
 #     llama-4-scout-17b:
@@ -145,9 +168,6 @@ volumeMounts:
 #         - /chat-templates/tool_chat_template_llama3.2_json.jinja
 #         - --tool-call-parser
 #         - llama3_json
-global:
-  models: {}
-  mcp-servers: {}
 
 # Hugging Face Token for model downloads
 llm-service:

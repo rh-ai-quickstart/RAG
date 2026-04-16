@@ -6,16 +6,16 @@ dependencies:
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.5.9
 - name: configure-pipeline
-  repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.5.7
+  repository: file://../../../../ai-architecture-charts/configure-pipeline/helm
+  version: 0.5.6
 - name: ingestion-pipeline
-  repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.7.3
+  repository: file://../../../../ai-architecture-charts/ingestion-pipeline/helm
+  version: 0.7.2
 - name: llama-stack
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.7.3
 - name: mcp-servers
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.5.15
-digest: sha256:91ce7975cc61f2fdfcde4a7b5743eb3496d9017638e2c7e127cc538f408283bb
-generated: "2026-04-07T11:02:05.071841-04:00"
+digest: sha256:8029badb9cda8c6a22e59045af8c10ccb85cb2dcd70a5c9eb2f71c194fcf8898
+generated: "2026-04-16T15:19:30.943761-04:00"
