@@ -81,11 +81,11 @@ def _sync_vector_db_selection(dropdown_options, vdb_list):
         st.session_state["vector_db_selector"] = selected
         return
 
-    # Priority 3: Smart default
+    # Priority 3: Smart default — pick the first real DB, not "Create New"
     if vdb_list:
-        first_db = dropdown_options[0]
-        st.session_state["selected_vector_db"] = first_db
-        st.session_state["vector_db_selector"] = first_db
+        first_real_db = dropdown_options[1]
+        st.session_state["selected_vector_db"] = first_real_db
+        st.session_state["vector_db_selector"] = first_real_db
     else:
         st.session_state["selected_vector_db"] = dropdown_options[0]
         st.session_state["vector_db_selector"] = dropdown_options[0]
@@ -364,7 +364,7 @@ def _get_documents_from_vector_store(vector_store_id):
         return list(files_response) if files_response else None
 
     except Exception as e:  # pylint: disable=broad-exception-caught
-        print(f"Error listing files from vector store: {e}")
+        st.warning(f"Could not list files: {e}")
         return None
 
 
@@ -416,49 +416,64 @@ def _get_file_sources(files):
     return source_names
 
 
-def _render_documents_table(files, source_names):
-    """Render the documents table with source and document ID columns.
+def _render_documents_table(files, source_names, vector_store_id):
+    """Render the documents table with source, document ID, and delete button.
 
     Args:
         files: List of vector store file objects
         source_names (dict): Mapping of file_id to source name
+        vector_store_id (str): The vector store identifier (for delete calls)
     """
-    # Add CSS for bordered table rows
     st.markdown("""
     <style>
-    div[data-testid="stHorizontalBlock"] {
-        border-bottom: 1px solid #444;
+    .doc-table-container div[data-testid="stHorizontalBlock"] {
+        border-bottom: 1px solid rgba(128, 128, 128, 0.3);
         padding: 8px 0;
     }
-    div[data-testid="stHorizontalBlock"]:first-of-type {
-        border-top: 1px solid #444;
-        background-color: rgba(255, 255, 255, 0.05);
+    .doc-table-container div[data-testid="stHorizontalBlock"]:first-of-type {
+        border-top: 1px solid rgba(128, 128, 128, 0.3);
+        background-color: rgba(128, 128, 128, 0.06);
         font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # Display table header
-    col1, col2, col3 = st.columns([0.5, 3, 3])
-    with col1:
-        st.markdown("**#**")
-    with col2:
-        st.markdown("**Source**")
-    with col3:
-        st.markdown("**Document ID**")
+    with st.container():
+        st.markdown('<div class="doc-table-container">', unsafe_allow_html=True)
 
-    # Display each file in a row
-    for idx, file_obj in enumerate(files, start=1):
-        col1, col2, col3 = st.columns([0.5, 3, 3])
-        file_id = getattr(file_obj, 'id', 'unknown')
-        source = source_names.get(file_id) or "unknown"
-
+        col1, col2, col3, col4 = st.columns([0.5, 3, 3, 1])
         with col1:
-            st.write(idx)
+            st.markdown("**#**")
         with col2:
-            st.write(source)
+            st.markdown("**Source**")
         with col3:
-            st.write(file_id)
+            st.markdown("**Document ID**")
+        with col4:
+            st.markdown("**Actions**")
+
+        for idx, file_obj in enumerate(files, start=1):
+            col1, col2, col3, col4 = st.columns([0.5, 3, 3, 1])
+            file_id = getattr(file_obj, 'id', 'unknown')
+            source = source_names.get(file_id) or "unknown"
+
+            with col1:
+                st.write(idx)
+            with col2:
+                st.write(source)
+            with col3:
+                st.write(file_id)
+            with col4:
+                if st.button("🗑️", key=f"delete_{file_id}", help=f"Delete {source}"):
+                    success, error_msg = _delete_file_from_vector_store(vector_store_id, file_id)
+                    if success:
+                        st.session_state["delete_status"] = "success"
+                        st.session_state["delete_message"] = f"Deleted '{source}' successfully."
+                    else:
+                        st.session_state["delete_status"] = "error"
+                        st.session_state["delete_message"] = f"Failed to delete '{source}': {error_msg}"
+                    st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
@@ -484,10 +499,12 @@ def _show_existing_documents_table(vector_db_name, vector_db_obj=None):
         with st.spinner("Checking for documents..."):
             files = _get_documents_from_vector_store(vector_db_id)
 
+            st.subheader(f"📄 Documents in '{vector_db_name}'")
             if files:
-                st.subheader(f"📄 Documents in '{vector_db_name}'")
                 source_names = _get_file_sources(files)
-                _render_documents_table(files, source_names)
+                _render_documents_table(files, source_names, vector_db_id)
+            else:
+                st.info("No documents found in this vector database. Upload some below!")
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         st.error(f"Error loading document information: {str(e)}")
