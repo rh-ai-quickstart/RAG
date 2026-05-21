@@ -82,7 +82,7 @@ def _sync_vector_db_selection(dropdown_options, vdb_list):
         return
 
     # Priority 3: Smart default — pick the first real DB, not "Create New"
-    if vdb_list:
+    if vdb_list and len(dropdown_options) > 1:
         first_real_db = dropdown_options[1]
         st.session_state["selected_vector_db"] = first_real_db
         st.session_state["vector_db_selector"] = first_real_db
