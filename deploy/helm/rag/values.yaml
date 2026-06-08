@@ -175,7 +175,14 @@ pgvector:
     - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
 
 llama-stack:
+  image:
+    repository: registry.redhat.io/rhoai/odh-llama-stack-core-rhel9
+    pullPolicy: Always
+    tag: "v3.4.0-ea.2"
   enabled: true
+  # Needed for vector storage to work when using the llama-stack version 3.4.0-ea.2
+  pgvector:
+    enabled: true
   fileProcessors:
     enabled: true
     providers:
@@ -185,7 +192,20 @@ llama-stack:
   secrets:
     TAVILY_SEARCH_API_KEY: "Paste-your-key-here"
 
+  # The RHOAI UBI/s2i image sets HOME=/opt/app-root/src, so ~/.llama resolves
+  # to /opt/app-root/src/.llama. Override the default volumeMounts (which use
+  # /.llama) to match the actual home directory path used by the container.
+  volumeMounts:
+    - mountPath: /app-config
+      name: run-config-volume
+    - mountPath: /opt/app-root/src/.llama
+      name: dot-llama
+    - mountPath: /opt/app-root/src/.cache
+      name: cache
+
 configure-pipeline:
+  managedPipelines:
+    enabled: false
   enabled: true
   minio:
     secret:
