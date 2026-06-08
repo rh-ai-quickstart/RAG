@@ -204,6 +204,7 @@ llama-stack:
       name: cache
 
 configure-pipeline:
+  # Set to false if you are running Openshift AI 3.4 or later and you want to disable the managed pipelines.
   managedPipelines:
     enabled: false
   enabled: true
