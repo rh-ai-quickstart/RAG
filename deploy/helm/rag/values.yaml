@@ -175,10 +175,6 @@ pgvector:
     - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
 
 llama-stack:
-  image:
-    repository: registry.redhat.io/rhoai/odh-llama-stack-core-rhel9
-    pullPolicy: Always
-    tag: "v3.4.0-ea.2"
   enabled: true
   # Needed for vector storage to work when using the llama-stack version 3.4.0-ea.2
   pgvector:
