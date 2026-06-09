@@ -231,6 +231,47 @@ podman-compose up -d
 - Process fewer documents per pipeline
 - Use smaller embedding models
 
+### Agent Mode Fails to Return Result
+
+**Issue**: Response never returned from LLM in CPU mode.
+
+**Solution:**
+- Copy the following yaml from rag-values.yaml.example and place in 
+  rag-value.yaml file.
+- Increase resources for CPU
+- Set LLM Flags for CPU mode
+
+```yaml
+llm-service:
+  device: cpu
+  secret:
+    hf_token: ""
+    enabled: true
+  models:
+    llama-3-2-1b-instruct:
+      enabled: true
+      device: cpu
+      # increase resources start
+      resources:
+        limits:
+          cpu: "6"
+          memory: 12Gi
+        requests:
+          cpu: "2"
+          memory: 6Gi
+      # increase resources end
+      args: # Copy from here down.
+        - --enable-auto-tool-choice
+        - --chat-template
+        - /chat-templates/tool_chat_template_llama3.2_json.jinja
+        - --tool-call-parser
+        - llama3_json
+        - --max-model-len
+        - "8192"
+        - --max-num-seqs
+        - "4"
+```
+
 ## Advanced Configuration
 
 ### Custom Embedding Model
