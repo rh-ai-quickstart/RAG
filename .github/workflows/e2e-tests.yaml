@@ -5,6 +5,7 @@ on:
     branches:
       - dev
       - main
+      
   push:
     branches:
       - dev
@@ -335,6 +336,8 @@ jobs:
           # Override MaaS configuration from environment variables
           # Note: All MaaS settings (endpoint, model ID, API key) passed via --set
           # Some values may appear as *** in logs due to GitHub Actions secret masking
+          # wait-for-models init is rendered when a MaaS model is registered; the subchart
+          # ignores initContainers/skipModelWait in values. Patch it out after install.
           helm install rag deploy/helm/rag \
             --namespace rag-e2e \
             --values tests/e2e/values-e2e.yaml \
@@ -342,10 +345,14 @@ jobs:
             --set global.models.${MAAS_MODEL_ID}.id="${MAAS_MODEL_ID}" \
             --set global.models.${MAAS_MODEL_ID}.enabled=true \
             --set global.models.${MAAS_MODEL_ID}.apiToken="${MAAS_API_KEY}" \
-            --set-json llama-stack.initContainers='[]' \
+            --wait=false \
             --skip-crds \
             --timeout 20m \
             --debug
+
+          kubectl patch deployment llamastack -n rag-e2e --type=json \
+            -p='[{"op":"replace","path":"/spec/template/spec/initContainers","value":[]}]'
+          kubectl rollout restart deployment/llamastack -n rag-e2e
 
       - name: Wait for core services to be ready
         run: |
@@ -459,7 +466,7 @@ jobs:
           echo "=== RAG UI logs ==="
           kubectl logs -l app.kubernetes.io/name=rag -n rag-e2e --tail=200 || echo "No RAG UI logs available"
           
-          echo "=== Llama Stack logs (CRITICAL - Check model registration) ==="
+          echo "=== Llama Stack logs ==="
           kubectl logs -l app.kubernetes.io/name=llamastack -n rag-e2e --tail=300 || echo "No Llama Stack logs available"
           
           echo "=== Llama Stack pod details ==="
@@ -618,6 +625,8 @@ jobs:
         run: |
           kubectl create namespace rag-e2e-ui || true
           
+          # wait-for-models init is rendered when a MaaS model is registered; the subchart
+          # ignores initContainers/skipModelWait in values. Patch it out after install.
           helm install rag deploy/helm/rag \
             --namespace rag-e2e-ui \
             --values tests/e2e/values-e2e.yaml \
@@ -625,10 +634,14 @@ jobs:
             --set global.models.${MAAS_MODEL_ID}.id="${MAAS_MODEL_ID}" \
             --set global.models.${MAAS_MODEL_ID}.enabled=true \
             --set global.models.${MAAS_MODEL_ID}.apiToken="${MAAS_API_KEY}" \
-            --set-json llama-stack.initContainers='[]' \
+            --wait=false \
             --skip-crds \
             --timeout 20m \
             --debug
+
+          kubectl patch deployment llamastack -n rag-e2e-ui --type=json \
+            -p='[{"op":"replace","path":"/spec/template/spec/initContainers","value":[]}]'
+          kubectl rollout restart deployment/llamastack -n rag-e2e-ui
 
       - name: Wait for services to be ready
         run: |

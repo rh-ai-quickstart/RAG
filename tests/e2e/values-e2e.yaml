@@ -47,15 +47,9 @@ volumeMounts:
 
 # Configure models to use Red Hat MaaS
 # All MaaS configuration (url, id, enabled, apiToken) will be injected via helm --set in GitHub Actions
-# This allows flexible configuration from workflow environment variables
+# The workflow patches out wait-for-models init after install (subchart ignores skipModelWait here)
 global:
   models: {}
-    # Example structure (populated by workflow):
-    # llama-3-2-3b:
-    #   url: "https://maas-endpoint/v1"
-    #   id: "llama-3-2-3b"
-    #   enabled: true
-    #   apiToken: "secret-key"
 
 # PostgreSQL + PGVector configuration
 pgvector:
@@ -68,31 +62,67 @@ pgvector:
     port: "5432"
   resources:
     requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
       memory: "512Mi"
       cpu: "500m"
-    limits:
-      memory: "1Gi"
-      cpu: "1"
+  # Default chart PVC is 5Gi — too heavy for Kind on GHA runners
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
 
-# Llama Stack configuration for MaaS
+# Llama Stack configuration for MaaS (ogxai/distribution-starter via llama-stack 0.8.x)
 llama-stack:
   enabled: true
   secrets:
     TAVILY_SEARCH_API_KEY: ""
-  
+
+  initContainers: []
+  skipModelWait: true
+
+  # OGX starter needs more headroom than the old llamastack image in Kind CI
   resources:
     requests:
-      memory: "512Mi"
+      memory: "1Gi"
       cpu: "500m"
     limits:
-      memory: "1Gi"
+      memory: "2Gi"
       cpu: "1"
-  
-  # Skip waiting for models since we're using external MaaS
-  # Override init containers to prevent waiting for local models
-  initContainers: []
-  # Don't wait for models - they're external via MaaS
-  skipModelWait: true
+
+  readinessProbe:
+    httpGet:
+      path: /v1/health
+      port: 8321
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 10
+
+  livenessProbe:
+    httpGet:
+      path: /v1/health
+      port: 8321
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 10
+
+  # Avoid llama-stack-data PVC (2Gi RWO) — use emptyDir in Kind CI
+  volumes:
+    - configMap:
+        defaultMode: 420
+        name: run-config
+      name: run-config-volume
+    - emptyDir: {}
+      name: dot-llama
+    - emptyDir: {}
+      name: cache
 
   fileProcessors:
     enabled: true
