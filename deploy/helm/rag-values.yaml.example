@@ -169,6 +169,17 @@ global:
     #     operator: Exists
     #     effect: NoSchedule
 
+    # Example Xeon configurations:
+    # llama-3-2-3b-instruct:
+    #   id: meta-llama/Llama-3.2-3B-Instruct
+    #   enabled: true
+    #   device: "xeon"
+    #   args:
+    #   - --max-model-len
+    #   - "14336"
+    #   - --max-num-seqs
+    #   - "32"
+    
   # MCP servers configuration
   mcp-servers: {}
 
