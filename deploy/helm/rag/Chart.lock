@@ -1,21 +1,21 @@
 dependencies:
 - name: pgvector
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.5.5
+  version: 0.5.6
 - name: llm-service
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.5.9
+  version: 0.5.10
 - name: configure-pipeline
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.5.8
+  version: 0.5.9
 - name: ingestion-pipeline
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.7.4
+  version: 0.7.5
 - name: llama-stack
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.8.6
+  version: 0.8.7
 - name: mcp-servers
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.5.15
-digest: sha256:3c8f3da85c35fec034c56cd43813e80ca7c223354de23b46747e9fcc44c527e0
-generated: "2026-06-09T09:12:30.763414-04:00"
+  version: 0.5.18
+digest: sha256:e0a207e133ea7ff565c5431f00272829ae9d041ac0e4869472eb06ba6b44ba58
+generated: "2026-07-13T15:48:14.880319387-07:00"
