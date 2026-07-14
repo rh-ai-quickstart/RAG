@@ -265,6 +265,13 @@ jobs:
           kubectl get pods -A
           kubectl get crds | grep route || echo "Route CRD check"
 
+      - name: Build RAG UI image and load into Kind
+        run: |
+          IMAGE_TAG=$(grep '^version:' deploy/helm/rag/Chart.yaml | awk '{print $2}')
+          echo "Building image with tag: ${IMAGE_TAG}"
+          docker build -t quay.io/rh-ai-quickstart/llamastack-dist-ui:${IMAGE_TAG} frontend/ -f frontend/Containerfile
+          kind load docker-image quay.io/rh-ai-quickstart/llamastack-dist-ui:${IMAGE_TAG} --name rag-e2e
+
       - name: Add Helm repository
         run: |
           helm repo add rag-charts https://rh-ai-quickstart.github.io/ai-architecture-charts
@@ -601,6 +608,13 @@ jobs:
           
           kubectl wait --for condition=established --timeout=60s crd/routes.route.openshift.io
           echo "✅ All required CRDs installed successfully"
+
+      - name: Build RAG UI image and load into Kind
+        run: |
+          IMAGE_TAG=$(grep '^version:' deploy/helm/rag/Chart.yaml | awk '{print $2}')
+          echo "Building image with tag: ${IMAGE_TAG}"
+          docker build -t quay.io/rh-ai-quickstart/llamastack-dist-ui:${IMAGE_TAG} frontend/ -f frontend/Containerfile
+          kind load docker-image quay.io/rh-ai-quickstart/llamastack-dist-ui:${IMAGE_TAG} --name rag-e2e-ui
 
       - name: Add Helm repository
         run: |
