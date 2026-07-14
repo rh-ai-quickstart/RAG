@@ -8,7 +8,9 @@ on:
 
 jobs:
   cleanup-branch:
-    if: startsWith(github.event.pull_request.head.ref, 'release/')
+    if: |
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
