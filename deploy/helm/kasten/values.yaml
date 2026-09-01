@@ -1,0 +1,45 @@
+# Target namespace of the RAG application to protect.
+# Should match the NAMESPACE used when installing the RAG chart.
+ragNamespace: llama-stack-rag
+
+# Kasten K10 namespace — must match the namespace K10 was installed into.
+kastenNamespace: kasten-io
+
+# Name of the K10 Location Profile to use for off-cluster backup storage.
+# Create the profile in the Kasten dashboard (Settings > Locations) before
+# or shortly after chart installation, then update this value with:
+#   make kasten-set-profile LOCATION_PROFILE=<name> NAMESPACE=<rag-namespace>
+# Leave empty to deploy the policy without a location binding (policy will
+# remain inactive until a profile is assigned).
+locationProfile: ""
+
+# Name of the Kubernetes Secret that holds pgvector credentials.
+# This secret is created by the pgvector subchart in the RAG namespace.
+# Typical name: pgvector-secret  (adjust if your chart uses a different convention)
+pgvectorSecretName: pgvector-secret
+
+# Kubernetes Service name of the pgvector instance.
+# Matches the service name created by the pgvector subchart.
+pgvectorServiceName: pgvector
+
+# PostgreSQL database name to dump/restore.
+pgvectorDatabase: rag_blueprint
+
+# Name of the pgvector StatefulSet — used by the annotation job.
+pgvectorStatefulSetName: pgvector
+
+# Name assigned to the Kanister Blueprint resource.
+blueprintName: pgvector-logical-backup
+
+# Kasten K10 backup policy settings.
+policy:
+  # Name of the K10 Policy resource.
+  name: rag-daily-backup
+  # Backup schedule.  Accepts cron syntax or shorthand: @daily, @weekly, @hourly.
+  frequency: "@daily"
+  # Retention settings (number of restore points to keep per period).
+  retention:
+    daily: 7
+    weekly: 4
+    monthly: 12
+    yearly: 5

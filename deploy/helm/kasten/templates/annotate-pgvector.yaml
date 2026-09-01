@@ -1,0 +1,94 @@
+# RBAC + Job — annotate the pgvector StatefulSet for Kanister discovery
+#
+# Kasten K10 discovers which workloads require Kanister-based logical backup
+# through the annotation:
+#   kanister.kasten.io/blueprint: <blueprint-name>
+#
+# Since the pgvector StatefulSet is managed by the RAG Helm release (a separate
+# chart), we annotate it via a post-install/post-upgrade Helm hook Job that
+# runs `kubectl annotate` after this chart is deployed.
+#
+# The Job runs in the kasten-io namespace using a dedicated ServiceAccount that
+# is granted the minimum RBAC required to patch StatefulSets in the RAG namespace.
+---
+# ServiceAccount used by the annotation Job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kasten-pgvector-annotator
+  namespace: {{ .Values.kastenNamespace }}
+  labels:
+    {{- include "kasten-config.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+# ClusterRole — allows patching StatefulSets (used only in the RAG namespace
+# via the RoleBinding below; kept as ClusterRole for re-use across namespaces)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kasten-statefulset-annotator
+  labels:
+    {{- include "kasten-config.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+- apiGroups: ["apps"]
+  resources: ["statefulsets"]
+  verbs: ["get", "patch"]
+---
+# RoleBinding — scopes the ClusterRole to the RAG namespace only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kasten-pgvector-annotator
+  namespace: {{ .Values.ragNamespace }}
+  labels:
+    {{- include "kasten-config.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+subjects:
+- kind: ServiceAccount
+  name: kasten-pgvector-annotator
+  namespace: {{ .Values.kastenNamespace }}
+roleRef:
+  kind: ClusterRole
+  name: kasten-statefulset-annotator
+  apiGroup: rbac.authorization.k8s.io
+---
+# Job — adds the Kanister blueprint annotation to the pgvector StatefulSet
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kasten-annotate-pgvector
+  namespace: {{ .Values.kastenNamespace }}
+  labels:
+    {{- include "kasten-config.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: kasten-pgvector-annotator
+      restartPolicy: OnFailure
+      containers:
+      - name: annotator
+        image: bitnami/kubectl:latest
+        command:
+        - kubectl
+        - annotate
+        - statefulset
+        - {{ .Values.pgvectorStatefulSetName }}
+        - -n
+        - {{ .Values.ragNamespace }}
+        - --overwrite
+        - kanister.kasten.io/blueprint={{ .Values.blueprintName }}

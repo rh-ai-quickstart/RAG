@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 812" role="img"
+     aria-label="Veeam Kasten K10 runs in the kasten-io namespace of the same OpenShift cluster as the RAG AI application. A daily policy selects the llama-stack-rag namespace, snapshots every persistent volume, runs a Kanister blueprint that takes a logical pg_dump of the pgvector database, captures all Kubernetes objects, and exports the resulting application-consistent restore point to an off-cluster location profile that the user defines."
+     font-family="'Red Hat Text', 'Red Hat Display', system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <title>Veeam Kasten protecting the OpenShift AI RAG application</title>
+
+  <defs>
+    <marker id="ak" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--dg-k,#0A8F45)"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--dg-rag,#C13440)"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1240" height="812" fill="var(--dg-bg,#FFFFFF)"/>
+
+  <!-- ── heading ───────────────────────────────────────────────────────── -->
+  <text x="24" y="33" font-size="17" font-weight="700" fill="var(--dg-ink,#14181F)">Veeam Kasten protects the RAG AI application as a single application</text>
+  <text x="24" y="53" font-size="11.5" fill="var(--dg-muted,#5C6673)">K10 runs beside the workload in the same cluster, captures its state as a single restore point, and exports that point off-cluster.</text>
+
+  <!-- ── OpenShift cluster ─────────────────────────────────────────────── -->
+  <rect x="24" y="72" width="856" height="712" rx="12" fill="none" stroke="var(--dg-line,#C7CED8)" stroke-width="1.5"/>
+  <text x="44" y="99" font-size="10" font-weight="700" letter-spacing="1.3" fill="var(--dg-muted,#5C6673)">OPENSHIFT CONTAINER PLATFORM 4.18+ · OPENSHIFT AI</text>
+
+  <!-- ── RAG namespace ─────────────────────────────────────────────────── -->
+  <rect x="48" y="112" width="808" height="380" rx="10" fill="var(--dg-panel,#F3F5F8)" stroke="var(--dg-rag,#C13440)" stroke-opacity="0.45"/>
+  <text x="68" y="137" font-size="11.5" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="600" fill="var(--dg-rag,#C13440)">namespace: llama-stack-rag<tspan font-family="'Red Hat Text', system-ui, sans-serif" font-weight="400" fill="var(--dg-muted,#5C6673)">   ·   RAG AI application</tspan></text>
+  <text x="68" y="155" font-size="10" fill="var(--dg-muted,#5C6673)">Stateless runtime — recreated from the captured manifests, not from a rebuild</text>
+
+  <!-- serving tier -->
+  <rect x="68"  y="162" width="180" height="68" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="84" y="185" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">Streamlit chat UI</text>
+  <text x="84" y="202" font-size="11" fill="var(--dg-muted,#5C6673)">OpenShift Route · :8501</text>
+  <text x="84" y="217" font-size="11" fill="var(--dg-muted,#5C6673)">chat · upload · inspect</text>
+
+  <rect x="264" y="162" width="180" height="68" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="280" y="185" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">LlamaStack API</text>
+  <text x="280" y="202" font-size="11" fill="var(--dg-muted,#5C6673)">:8321 · agents, shields</text>
+  <text x="280" y="217" font-size="11" fill="var(--dg-muted,#5C6673)">in-process embeddings</text>
+
+  <rect x="460" y="162" width="180" height="68" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="476" y="185" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">vLLM on KServe</text>
+  <text x="476" y="202" font-size="11" fill="var(--dg-muted,#5C6673)">Llama-3.2-3B · Guard-3-8B</text>
+  <text x="476" y="217" font-size="11" fill="var(--dg-muted,#5C6673)">GPU · weights on emptyDir</text>
+
+  <rect x="656" y="162" width="180" height="68" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="672" y="185" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">Ingestion + MCP</text>
+  <text x="672" y="202" font-size="11" fill="var(--dg-muted,#5C6673)">rag-ingestion-pipeline</text>
+  <text x="672" y="217" font-size="11" fill="var(--dg-muted,#5C6673)">DSPA · MCP tool servers</text>
+
+  <!-- state band -->
+  <rect x="68" y="246" width="768" height="196" rx="8" fill="var(--dg-panel2,#E9EDF2)" stroke="var(--dg-rag,#C13440)" stroke-opacity="0.55" stroke-dasharray="5 4"/>
+  <text x="84" y="269" font-size="11.5" font-weight="700" fill="var(--dg-ink,#14181F)">Application state — the expensive-to-rebuild part, captured together as ONE application-consistent restore point</text>
+
+  <rect x="84" y="282" width="172" height="144" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="98" y="305" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">pgvector StatefulSet</text>
+  <text x="98" y="326" font-size="11" fill="var(--dg-muted,#5C6673)">PostgreSQL 17 + pgvector</text>
+  <text x="98" y="343" font-size="11" fill="var(--dg-muted,#5C6673)">embeddings, collections,</text>
+  <text x="98" y="360" font-size="11" fill="var(--dg-muted,#5C6673)">relational metadata</text>
+  <text x="98" y="378" font-size="9.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-muted,#5C6673)">pg-data-pgvector-0 · 5Gi</text>
+  <rect x="98" y="390" width="144" height="20" rx="5" fill="var(--dg-k-soft,#E8F6EE)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.45"/>
+  <text x="170" y="404" font-size="8.5" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" fill="var(--dg-k,#0A8F45)">kanister.kasten.io/blueprint</text>
+
+  <rect x="272" y="282" width="172" height="144" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="286" y="305" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">MinIO / S3 store</text>
+  <text x="286" y="326" font-size="11" fill="var(--dg-muted,#5C6673)">source document corpus</text>
+  <text x="286" y="343" font-size="11" fill="var(--dg-muted,#5C6673)">bucket: documents</text>
+  <text x="286" y="360" font-size="11" fill="var(--dg-muted,#5C6673)">HR, legal, sales, IT PDFs</text>
+  <text x="286" y="378" font-size="9.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-muted,#5C6673)">minio-data-minio-0 · 50Gi</text>
+
+  <rect x="460" y="282" width="172" height="144" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="474" y="305" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">LlamaStack + KFP</text>
+  <text x="474" y="326" font-size="11" fill="var(--dg-muted,#5C6673)">registry, sessions, files</text>
+  <text x="474" y="343" font-size="11" fill="var(--dg-muted,#5C6673)">pipeline defs, run history</text>
+  <text x="474" y="362" font-size="9.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-muted,#5C6673)">llama-stack-data · 2Gi</text>
+  <text x="474" y="378" font-size="9.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-muted,#5C6673)">mariadb-dspa · 10Gi</text>
+  <text x="474" y="394" font-size="9.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-muted,#5C6673)">pipeline-vol · 1Gi</text>
+
+  <rect x="648" y="282" width="172" height="144" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="662" y="305" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">Kubernetes objects</text>
+  <text x="662" y="326" font-size="11" fill="var(--dg-muted,#5C6673)">Deployments, StatefulSets</text>
+  <text x="662" y="343" font-size="11" fill="var(--dg-muted,#5C6673)">Services, Routes, RBAC</text>
+  <text x="662" y="360" font-size="11" fill="var(--dg-muted,#5C6673)">ConfigMaps &amp; Secrets</text>
+  <text x="662" y="377" font-size="11" fill="var(--dg-muted,#5C6673)">InferenceService and</text>
+  <text x="662" y="394" font-size="11" fill="var(--dg-muted,#5C6673)">ServingRuntime CRs</text>
+
+  <!-- ── kasten-io namespace ───────────────────────────────────────────── -->
+  <rect x="48" y="560" width="808" height="200" rx="10" fill="var(--dg-panel,#F3F5F8)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.55"/>
+  <text x="68" y="587" font-size="11.5" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="600" fill="var(--dg-k,#0A8F45)">namespace: kasten-io<tspan font-family="'Red Hat Text', system-ui, sans-serif" font-weight="400" fill="var(--dg-muted,#5C6673)">   ·   Veeam Kasten K10 — same cluster, its own namespace</tspan></text>
+
+  <rect x="68" y="596" width="180" height="148" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.55"/>
+  <text x="84" y="619" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">Kanister Blueprint</text>
+  <text x="84" y="637" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-k,#0A8F45)">pgvector-logical-backup</text>
+  <text x="84" y="661" font-size="11" fill="var(--dg-muted,#5C6673)">pg_dump -Fc | kando push</text>
+  <text x="84" y="678" font-size="11" fill="var(--dg-muted,#5C6673)">logical, not block-level:</text>
+  <text x="84" y="695" font-size="11" fill="var(--dg-muted,#5C6673)">restores across storage</text>
+  <text x="84" y="712" font-size="11" fill="var(--dg-muted,#5C6673)">classes, clusters and</text>
+  <text x="84" y="729" font-size="11" fill="var(--dg-muted,#5C6673)">PostgreSQL versions</text>
+
+  <rect x="264" y="596" width="180" height="148" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.55"/>
+  <text x="280" y="619" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">Backup policy</text>
+  <text x="280" y="637" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-k,#0A8F45)">rag-daily-backup</text>
+  <text x="280" y="661" font-size="11" fill="var(--dg-muted,#5C6673)">frequency: @daily</text>
+  <text x="280" y="678" font-size="11" fill="var(--dg-muted,#5C6673)">selector: appNamespace</text>
+  <text x="280" y="695" font-size="11" fill="var(--dg-muted,#5C6673)">    = llama-stack-rag</text>
+  <text x="280" y="712" font-size="11" fill="var(--dg-muted,#5C6673)">retain 7d / 4w / 12m / 5y</text>
+  <text x="280" y="729" font-size="11" fill="var(--dg-muted,#5C6673)">shipped by Helm as a CR</text>
+
+  <rect x="460" y="596" width="180" height="148" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.55"/>
+  <text x="476" y="619" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">K10 platform</text>
+  <text x="476" y="637" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-k,#0A8F45)">helm install kasten/k10</text>
+  <text x="476" y="661" font-size="11" fill="var(--dg-muted,#5C6673)">dashboard Route</text>
+  <text x="476" y="678" font-size="11" fill="var(--dg-muted,#5C6673)">OpenShift token auth</text>
+  <text x="476" y="695" font-size="11" fill="var(--dg-muted,#5C6673)">catalog · executor ·</text>
+  <text x="476" y="712" font-size="11" fill="var(--dg-muted,#5C6673)">gateway</text>
+  <text x="476" y="729" font-size="11" fill="var(--dg-muted,#5C6673)">RunAction API</text>
+
+  <rect x="656" y="596" width="180" height="148" rx="7" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.55"/>
+  <text x="672" y="619" font-size="13" font-weight="700" fill="var(--dg-ink,#14181F)">Export off-cluster</text>
+  <text x="672" y="637" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-k,#0A8F45)">backupParameters.profile</text>
+  <text x="672" y="661" font-size="11" fill="var(--dg-muted,#5C6673)">part of the same backup</text>
+  <text x="672" y="678" font-size="11" fill="var(--dg-muted,#5C6673)">action — no second step</text>
+  <text x="672" y="695" font-size="11" fill="var(--dg-muted,#5C6673)">you bind the profile with</text>
+  <text x="672" y="712" font-size="9.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-muted,#5C6673)">make kasten-set-profile</text>
+  <text x="672" y="729" font-size="11" fill="var(--dg-muted,#5C6673)">deduplicated + encrypted</text>
+
+  <!-- ── arrows ────────────────────────────────────────────────────────── -->
+  <!-- A: blueprint <-> pgvector -->
+  <path d="M158,592 V430" fill="none" stroke="var(--dg-k,#0A8F45)" stroke-width="1.8" marker-end="url(#ak)" marker-start="url(#ak)"/>
+  <text x="146" y="508" font-size="10.5" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="end" fill="var(--dg-k,#0A8F45)">pg_dump /</text>
+  <text x="146" y="522" font-size="10.5" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="end" fill="var(--dg-k,#0A8F45)">pg_restore</text>
+  <text x="146" y="537" font-size="10" text-anchor="end" fill="var(--dg-muted,#5C6673)">against the live DB</text>
+
+  <!-- B: policy -> whole app -->
+  <path d="M354,592 V548 H452 V446" fill="none" stroke="var(--dg-k,#0A8F45)" stroke-width="2" marker-end="url(#ak)"/>
+  <text x="344" y="504" font-size="11" font-weight="600" text-anchor="end" fill="var(--dg-k,#0A8F45)">@daily backup of the</text>
+  <text x="344" y="519" font-size="11" font-weight="600" text-anchor="end" fill="var(--dg-k,#0A8F45)">whole RAG namespace</text>
+  <text x="344" y="534" font-size="10" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="end" fill="var(--dg-muted,#5C6673)">CSI VolumeSnapshot</text>
+
+  <!-- C: ingestion pipeline -> K10 RunAction -->
+  <path d="M546,430 V592" fill="none" stroke="var(--dg-rag,#C13440)" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="558" y="506" font-size="10.5" font-family="'IBM Plex Mono', ui-monospace, monospace" fill="var(--dg-rag,#C13440)">RunAction API</text>
+  <text x="558" y="521" font-size="10.5" fill="var(--dg-muted,#5C6673)">the pipeline backs up</text>
+  <text x="558" y="535" font-size="10.5" fill="var(--dg-muted,#5C6673)">before every ingest run</text>
+
+  <!-- D: export / restore -->
+  <path d="M836,628 H930" fill="none" stroke="var(--dg-k,#0A8F45)" stroke-width="2.2" marker-end="url(#ak)"/>
+  <text x="883" y="618" font-size="11" font-weight="700" text-anchor="middle" fill="var(--dg-k,#0A8F45)">export</text>
+  <path d="M930,676 H842" fill="none" stroke="var(--dg-k,#0A8F45)" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#ak)"/>
+  <text x="886" y="666" font-size="11" font-weight="700" text-anchor="middle" fill="var(--dg-k,#0A8F45)">restore</text>
+
+  <!-- ── off-cluster location profile ──────────────────────────────────── -->
+  <rect x="936" y="72" width="280" height="712" rx="12" fill="none" stroke="var(--dg-line,#C7CED8)" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="956" y="99" font-size="10" font-weight="700" letter-spacing="1.3" fill="var(--dg-muted,#5C6673)">OFF-CLUSTER BACKUP TARGET</text>
+
+  <text x="956" y="135" font-size="15" font-weight="700" fill="var(--dg-ink,#14181F)">Location profile</text>
+  <text x="956" y="153" font-size="10.5" fill="var(--dg-muted,#5C6673)">you create this yourself in the K10</text>
+  <text x="956" y="167" font-size="10.5" fill="var(--dg-muted,#5C6673)">dashboard: Settings › Locations</text>
+
+  <rect x="956" y="182" width="240" height="54" rx="6" fill="var(--dg-k-soft,#E8F6EE)" stroke="var(--dg-k,#0A8F45)" stroke-opacity="0.6"/>
+  <text x="1076" y="206" font-size="11.5" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" fill="var(--dg-k,#0A8F45)">S3 · Azure Blob · GCS · NFS</text>
+  <text x="1076" y="223" font-size="10" text-anchor="middle" fill="var(--dg-muted,#5C6673)">object-lock immutability optional</text>
+
+  <text x="956" y="269" font-size="10" font-weight="700" letter-spacing="1.2" fill="var(--dg-muted,#5C6673)">ONE RESTORE POINT CONTAINS</text>
+  <rect x="956" y="280" width="240" height="132" rx="6" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="972" y="303" font-size="11" fill="var(--dg-ink,#14181F)">· Deployments, StatefulSets</text>
+  <text x="972" y="321" font-size="11" fill="var(--dg-ink,#14181F)">· Services, Routes, RBAC</text>
+  <text x="972" y="339" font-size="11" fill="var(--dg-ink,#14181F)">· ConfigMaps, Secrets, CRs</text>
+  <text x="972" y="357" font-size="11" fill="var(--dg-ink,#14181F)">· PVC volume data (CSI)</text>
+  <text x="972" y="375" font-size="11" fill="var(--dg-ink,#14181F)">· pgvector .pgdump (Kanister)</text>
+  <text x="972" y="393" font-size="11" fill="var(--dg-ink,#14181F)">· MinIO document corpus</text>
+
+  <text x="956" y="441" font-size="10" font-weight="700" letter-spacing="1.2" fill="var(--dg-muted,#5C6673)">RETENTION</text>
+  <rect x="956" y="450" width="240" height="46" rx="6" fill="var(--dg-panel2,#E9EDF2)"/>
+  <text x="1076" y="469" font-size="11" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" fill="var(--dg-ink,#14181F)">7 daily · 4 weekly</text>
+  <text x="1076" y="485" font-size="11" font-family="'IBM Plex Mono', ui-monospace, monospace" text-anchor="middle" fill="var(--dg-ink,#14181F)">12 monthly · 5 yearly</text>
+
+  <text x="956" y="525" font-size="10" font-weight="700" letter-spacing="1.2" fill="var(--dg-muted,#5C6673)">RECOVERY &amp; MOBILITY</text>
+  <rect x="956" y="536" width="240" height="132" rx="6" fill="var(--dg-box,#FFFFFF)" stroke="var(--dg-line,#C7CED8)"/>
+  <text x="972" y="559" font-size="11" fill="var(--dg-ink,#14181F)">· Restore the same namespace</text>
+  <text x="972" y="577" font-size="11" fill="var(--dg-ink,#14181F)">· Clone into a new namespace</text>
+  <text x="972" y="595" font-size="11" fill="var(--dg-ink,#14181F)">· Migrate to another cluster</text>
+  <text x="972" y="613" font-size="11" fill="var(--dg-ink,#14181F)">· Rehearse DR without prod risk</text>
+  <text x="972" y="631" font-size="11" fill="var(--dg-ink,#14181F)">· Roll back a bad ingestion run</text>
+  <text x="972" y="649" font-size="11" fill="var(--dg-ink,#14181F)">· Ransomware recovery</text>
+
+  <text x="956" y="704" font-size="10.5" fill="var(--dg-muted,#5C6673)">Embeddings come back restored, not</text>
+  <text x="956" y="719" font-size="10.5" fill="var(--dg-muted,#5C6673)">recomputed — no re-ingestion, no GPU</text>
+  <text x="956" y="734" font-size="10.5" fill="var(--dg-muted,#5C6673)">hours, RTO in minutes.</text>
+</svg>

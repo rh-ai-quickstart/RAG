@@ -1,0 +1,43 @@
+# Kasten K10 Policy — daily backup of the RAG AI application namespace
+#
+# Selects every application in .Values.ragNamespace and backs it up on the
+# configured schedule.  The pgvector StatefulSet is annotated with the Kanister
+# blueprint name, so Kasten will invoke the logical pg_dump blueprint in
+# addition to the standard volume snapshot for all other PVCs.
+#
+# Prerequisites:
+#   - A K10 Location Profile must exist in the kasten-io namespace before the
+#     policy can export data off-cluster.  Set .Values.locationProfile to the
+#     profile name (or update it later with: make kasten-set-profile).
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: Policy
+metadata:
+  name: {{ .Values.policy.name }}
+  namespace: {{ .Values.kastenNamespace }}
+  labels:
+    {{- include "kasten-config.labels" . | nindent 4 }}
+spec:
+  comment: "Daily backup of the RAG AI application and pgvector database in namespace {{ .Values.ragNamespace }}"
+  frequency: {{ .Values.policy.frequency | quote }}
+  paused: false
+  selector:
+    matchExpressions:
+    - key: k10.kasten.io/appNamespace
+      operator: In
+      values:
+      - {{ .Values.ragNamespace | quote }}
+  actions:
+  - action: backup
+    backupParameters:
+      {{- if .Values.locationProfile }}
+      profile:
+        clusterName: ""
+        name: {{ .Values.locationProfile | quote }}
+        namespace: {{ .Values.kastenNamespace | quote }}
+      {{- end }}
+      filters: {}
+  retention:
+    daily: {{ .Values.policy.retention.daily }}
+    weekly: {{ .Values.policy.retention.weekly }}
+    monthly: {{ .Values.policy.retention.monthly }}
+    yearly: {{ .Values.policy.retention.yearly }}
