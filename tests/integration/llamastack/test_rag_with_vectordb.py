@@ -145,7 +145,7 @@ def test_rag_query(llama_stack_client: LlamaStackClient, model_id: str, vector_d
         # Try simpler query without RAG tool
         print("   Trying fallback query...")
         try:
-            simple_response = client.inference.chat_completion(
+            simple_response = llama_stack_client.inference.chat_completion(
                 model_id=model_id,
                 messages=[
                     {
