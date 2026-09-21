@@ -1,0 +1,117 @@
+# Kanister Blueprint — pgvector logical backup and restore
+#
+# Performs a pg_dump / pg_restore against the pgvector PostgreSQL instance.
+# The blueprint is triggered automatically by Kasten K10 whenever it backs up
+# a StatefulSet that carries the annotation:
+#   kanister.kasten.io/blueprint: {{ .Values.blueprintName }}
+#
+# The annotation is applied to the pgvector StatefulSet by the Job in
+# annotate-pgvector.yaml during chart installation.
+#
+# Blueprint image: ghcr.io/kanisterio/postgresql
+#   Contains pg_dump, pg_restore, and the `kando` CLI (for location profile I/O).
+#
+# NOTE: Kanister uses its own Go template engine at run-time.  The {{ "{{" }} … {{ "}}" }}
+# expressions below are Kanister runtime templates, not Helm templates.
+apiVersion: cr.kanister.io/v1alpha1
+kind: Blueprint
+metadata:
+  name: {{ .Values.blueprintName }}
+  namespace: {{ .Values.kastenNamespace }}
+  labels:
+    {{- include "kasten-config.labels" . | nindent 4 }}
+actions:
+  # ── backup ──────────────────────────────────────────────────────────────────
+  backup:
+    kind: StatefulSet
+    outputArtifacts:
+      pgvectorDump:
+        keyValue:
+          path: '{{ "{{" }} .Phases.pgDump.Output.path {{ "}}" }}'
+    phases:
+    - func: KubeTask
+      name: pgDump
+      objects:
+        pgvectorSecret:
+          kind: Secret
+          name: {{ .Values.pgvectorSecretName }}
+          namespace: '{{ "{{" }} .StatefulSet.Namespace {{ "}}" }}'
+      args:
+        image: ghcr.io/kanisterio/postgresql:0.109.0
+        namespace: '{{ "{{" }} .StatefulSet.Namespace {{ "}}" }}'
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          backup_path="pgvector-backups/{{ "{{" }} .StatefulSet.Namespace {{ "}}" }}/{{ "{{" }} toDate "2006-01-02T15:04:05.999999999Z07:00" .Time | date "2006-01-02T15-04-05" {{ "}}" }}/pgvector-dump.pgdump"
+          PGPASSWORD="{{ "{{" }} index .Phases.pgDump.Secrets.pgvectorSecret.Data "password" | toString {{ "}}" }}" \
+            pg_dump \
+              -h {{ .Values.pgvectorServiceName }} \
+              -U "{{ "{{" }} index .Phases.pgDump.Secrets.pgvectorSecret.Data "user" | toString {{ "}}" }}" \
+              -d {{ .Values.pgvectorDatabase }} \
+              -Fc | \
+          kando location push \
+            --profile '{{ "{{" }} toJson .Profile {{ "}}" }}' \
+            --path "${backup_path}" \
+            --stdin
+          kando output path "${backup_path}"
+
+  # ── restore ─────────────────────────────────────────────────────────────────
+  restore:
+    kind: StatefulSet
+    inputArtifactNames:
+    - pgvectorDump
+    phases:
+    - func: KubeTask
+      name: pgRestore
+      objects:
+        pgvectorSecret:
+          kind: Secret
+          name: {{ .Values.pgvectorSecretName }}
+          namespace: '{{ "{{" }} .StatefulSet.Namespace {{ "}}" }}'
+      args:
+        image: ghcr.io/kanisterio/postgresql:0.109.0
+        namespace: '{{ "{{" }} .StatefulSet.Namespace {{ "}}" }}'
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          kando location pull \
+            --profile '{{ "{{" }} toJson .Profile {{ "}}" }}' \
+            --path '{{ "{{" }} .ArtifactsIn.pgvectorDump.KeyValue.path {{ "}}" }}' \
+            --stdout | \
+          PGPASSWORD="{{ "{{" }} index .Phases.pgRestore.Secrets.pgvectorSecret.Data "password" | toString {{ "}}" }}" \
+            pg_restore \
+              -h {{ .Values.pgvectorServiceName }} \
+              -U "{{ "{{" }} index .Phases.pgRestore.Secrets.pgvectorSecret.Data "user" | toString {{ "}}" }}" \
+              -d {{ .Values.pgvectorDatabase }} \
+              --clean --if-exists
+
+  # ── delete ──────────────────────────────────────────────────────────────────
+  delete:
+    type: Namespaced
+    phases:
+    - func: KubeTask
+      name: deleteBackup
+      args:
+        image: ghcr.io/kanisterio/postgresql:0.109.0
+        namespace: '{{ "{{" }} .Namespace.Name {{ "}}" }}'
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          kando location delete \
+            --profile '{{ "{{" }} toJson .Profile {{ "}}" }}' \
+            --path '{{ "{{" }} .ArtifactsIn.pgvectorDump.KeyValue.path {{ "}}" }}'

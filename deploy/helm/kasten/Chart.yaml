@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kasten-config
+description: Kasten K10 data protection configuration for the RAG AI application — deploys a Kanister blueprint for pgvector logical backup and a daily Kasten policy covering the RAG namespace.
+type: application
+version: 0.1.0
+appVersion: "7.0.0"
