@@ -148,14 +148,10 @@ You can work with your OpenShift cluster admin team to determine what labels and
 cd deploy/helm
 ```
 
-For this local integration branch, RAG depends on the unpublished
-`configure-pipeline` 0.5.12 chart through a `file://` dependency. Keep the
-`ai-architecture-charts` checkout beside the RAG checkout (the directory is
-named `rag` in Quickstart Factory), then package and build from `deploy/helm`:
+Build the chart dependencies from `deploy/helm`:
 
 ```bash
-helm package ../../../ai-architecture-charts/configure-pipeline/helm --destination rag/charts
-helm dependency build rag --skip-refresh
+helm dependency build rag
 ```
 
 The chart deploys **aws-compatible-storage (S4)** at `http://s4:7480`.
@@ -165,8 +161,7 @@ Credentials are held in `s4-credentials` under `AWS_ACCESS_KEY_ID` and
 `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` to Make. Sample PDFs upload to the
 `documents` bucket through `configure-pipeline.sampleFileUpload`; the notebook
 uses the same bucket. The S3 endpoint stays inside the cluster and the S4 web
-UI route is disabled. Replace the local dependency URL with the published
-chart repository when 0.5.12 is released.
+UI route is disabled.
 
 5. **List Available Models**
 

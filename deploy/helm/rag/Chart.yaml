@@ -16,8 +16,7 @@ dependencies:
     condition: llm-service.enabled
   - name: configure-pipeline
     version: 0.5.12
-    # Local integration until configure-pipeline 0.5.12 is published.
-    repository: file://../../../../ai-architecture-charts/configure-pipeline/helm
+    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
     condition: configure-pipeline.enabled
   - name: ingestion-pipeline
     version: 0.7.5
