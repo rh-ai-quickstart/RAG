@@ -23,8 +23,8 @@ VERSION ?= 0.2.22
 POSTGRES_USER ?= postgres
 POSTGRES_PASSWORD ?= rag_password
 POSTGRES_DBNAME ?= rag_blueprint
-MINIO_USER ?= minio_rag_user
-MINIO_PASSWORD ?= minio_rag_password
+S3_ACCESS_KEY_ID ?= s4admin
+S3_SECRET_ACCESS_KEY ?= s4secret
 # HF_TOKEN will be managed by the get_hf_token helper function
 INTERACTIVE ?= true
 RAG_CHART := rag
@@ -160,10 +160,10 @@ SOURCE ?= S3
 EMBEDDING_MODEL ?= all-MiniLM-L6-v2
 INGESTION_PIPELINE_NAME ?= demo-rag-vector-db
 INGESTION_PIPELINE_VERSION ?= 1.0
-ACCESS_KEY_ID ?= $(MINIO_USER)
-SECRET_ACCESS_KEY ?= $(MINIO_PASSWORD)
+ACCESS_KEY_ID ?= $(S3_ACCESS_KEY_ID)
+SECRET_ACCESS_KEY ?= $(S3_SECRET_ACCESS_KEY)
 BUCKET_NAME ?= documents
-ENDPOINT_URL ?= http://minio:9000
+ENDPOINT_URL ?= http://s4:7480
 REGION ?= us-east-1
 # PDF file path variable for upload-pdf target
 PDF_DIR = ../../notebooks
@@ -178,9 +178,9 @@ helm_pgvector_args = \
     --set pgvector.secret.password=$(POSTGRES_PASSWORD) \
     --set pgvector.secret.dbname=$(POSTGRES_DBNAME)
 
-helm_minio_args = \
-    --set minio.secret.user=$(MINIO_USER) \
-    --set minio.secret.password=$(MINIO_PASSWORD)
+helm_storage_args = \
+    $(if $(filter file,$(origin S3_ACCESS_KEY_ID)),,--set configure-pipeline.aws-compatible-storage.s3.accessKeyId=$(S3_ACCESS_KEY_ID)) \
+    $(if $(filter file,$(origin S3_SECRET_ACCESS_KEY)),,--set configure-pipeline.aws-compatible-storage.s3.secretAccessKey=$(S3_SECRET_ACCESS_KEY))
 
 helm_llm_service_args = \
     --set llm-service.secret.hf_token=$(HF_TOKEN) \
@@ -632,10 +632,10 @@ install: ## Install the RAG deployment
 		echo -e "$(BLUE)[INFO]$(NC) Setting Llama Stack environment variables"; \
 		HELM_ARGS="$$HELM_ARGS --set-json llama-stack.secrets='$(LLAMA_STACK_ENV)'"; \
 	fi; \
-	HELM_ARGS="$$HELM_ARGS $(EXTRA_HELM_ARGS)"; \
+	HELM_ARGS="$$HELM_ARGS $(helm_storage_args) $(EXTRA_HELM_ARGS)"; \
 	helm -n $(NAMESPACE) upgrade --install $(RAG_CHART) $(RAG_CHART) -n $(NAMESPACE) $$HELM_ARGS
 	@echo -e "$(BLUE)[INFO]$(NC) Waiting for model services and llamastack to deploy. It may take around 10-15 minutes depending on the size of the model..."
-	@oc rollout status deploy/llamastack
+	@oc rollout status deploy/llamastack -n $(NAMESPACE)
 	@echo -e "$(GREEN)[SUCCESS]$(NC) $(RAG_CHART) installed successfully"
 
 # Install with TAVILY integration (deprecated - use values file instead)
@@ -651,8 +651,8 @@ uninstall: ## Uninstall the RAG deployment and clean up resources
 	@if [ -z "$(NAMESPACE)" ]; then echo -e "$(RED)[ERROR]$(NC) NAMESPACE is required for uninstall"; exit 1; fi
 	@echo -e "$(BLUE)[INFO]$(NC) Uninstalling $(RAG_CHART) helm chart..."
 	@helm -n $(NAMESPACE) uninstall $(RAG_CHART)
-	@echo -e "$(BLUE)[INFO]$(NC) Removing pgvector and minio PVCs from $(NAMESPACE)..."
-	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|minio)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
+	@echo -e "$(BLUE)[INFO]$(NC) Removing pgvector and S4 PVCs from $(NAMESPACE)..."
+	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|s4)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
 	@echo -e "$(BLUE)[INFO]$(NC) Deleting remaining pods in namespace $(NAMESPACE)..."
 	@oc delete pods -n $(NAMESPACE) --all
 	@echo -e "$(YELLOW)[INFO]$(NC) Checking for any remaining resources in namespace $(NAMESPACE)..."
