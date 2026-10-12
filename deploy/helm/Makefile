@@ -163,7 +163,7 @@ INGESTION_PIPELINE_VERSION ?= 1.0
 ACCESS_KEY_ID ?= $(S3_ACCESS_KEY_ID)
 SECRET_ACCESS_KEY ?= $(S3_SECRET_ACCESS_KEY)
 BUCKET_NAME ?= documents
-ENDPOINT_URL ?= http://s4:7480
+ENDPOINT_URL ?= http://aws-compatible-storage:7480
 REGION ?= us-east-1
 # PDF file path variable for upload-pdf target
 PDF_DIR = ../../notebooks
@@ -652,7 +652,7 @@ uninstall: ## Uninstall the RAG deployment and clean up resources
 	@echo -e "$(BLUE)[INFO]$(NC) Uninstalling $(RAG_CHART) helm chart..."
 	@helm -n $(NAMESPACE) uninstall $(RAG_CHART)
 	@echo -e "$(BLUE)[INFO]$(NC) Removing pgvector and S4 PVCs from $(NAMESPACE)..."
-	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|s4)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
+	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|aws-compatible-storage)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
 	@echo -e "$(BLUE)[INFO]$(NC) Deleting remaining pods in namespace $(NAMESPACE)..."
 	@oc delete pods -n $(NAMESPACE) --all
 	@echo -e "$(YELLOW)[INFO]$(NC) Checking for any remaining resources in namespace $(NAMESPACE)..."
