@@ -198,14 +198,14 @@ configure-pipeline:
   aws-compatible-storage:
     fullnameOverride: aws-compatible-storage
     s3:
-      accessKeyId: s4admin
-      secretAccessKey: s4secret
+      accessKeyId: storageadmin
+      secretAccessKey: storagepassword
     auth:
       enabled: false
     route:
       enabled: false
 
-    # Upload sample documents to S4.
+    # Upload sample documents to s3 compatible storage.
     sampleFileUpload:
       enabled: true
       bucket: documents
@@ -285,7 +285,7 @@ ingestion-pipeline:
   enabled: true
   serviceAccount:
     create: true
-    name: rag-ingestion-pipeline
+    name: rag-pipeline-notebook
   pipelines:
     # GitHub-based pipeline
     hr-pipeline:

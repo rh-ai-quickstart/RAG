@@ -23,8 +23,8 @@ VERSION ?= 0.2.22
 POSTGRES_USER ?= postgres
 POSTGRES_PASSWORD ?= rag_password
 POSTGRES_DBNAME ?= rag_blueprint
-S3_ACCESS_KEY_ID ?= s4admin
-S3_SECRET_ACCESS_KEY ?= s4secret
+S3_ACCESS_KEY_ID ?= storageadmin
+S3_SECRET_ACCESS_KEY ?= storagepassword
 # HF_TOKEN will be managed by the get_hf_token helper function
 INTERACTIVE ?= true
 RAG_CHART := rag
@@ -651,7 +651,7 @@ uninstall: ## Uninstall the RAG deployment and clean up resources
 	@if [ -z "$(NAMESPACE)" ]; then echo -e "$(RED)[ERROR]$(NC) NAMESPACE is required for uninstall"; exit 1; fi
 	@echo -e "$(BLUE)[INFO]$(NC) Uninstalling $(RAG_CHART) helm chart..."
 	@helm -n $(NAMESPACE) uninstall $(RAG_CHART)
-	@echo -e "$(BLUE)[INFO]$(NC) Removing pgvector and S4 PVCs from $(NAMESPACE)..."
+	@echo -e "$(BLUE)[INFO]$(NC) Removing pgvector and s3 compatible storage PVCs from $(NAMESPACE)..."
 	@oc get pvc -n $(NAMESPACE) -o custom-columns=NAME:.metadata.name | grep -E '^(pg|aws-compatible-storage)-data' | xargs -I {} oc delete pvc -n $(NAMESPACE) {} ||:
 	@echo -e "$(BLUE)[INFO]$(NC) Deleting remaining pods in namespace $(NAMESPACE)..."
 	@oc delete pods -n $(NAMESPACE) --all
