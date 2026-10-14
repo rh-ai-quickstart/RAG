@@ -178,9 +178,6 @@ llama-stack:
 
 configure-pipeline:
   enabled: true
-  notebook:
-    s3:
-      bucket_name: documents
   pipelineStorage:
     deployAwsCompatibleStorage: true
   aws-compatible-storage:

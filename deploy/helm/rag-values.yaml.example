@@ -193,9 +193,6 @@ pgvector:
     port: "5432"
 
 configure-pipeline:
-  notebook:
-    s3:
-      bucket_name: documents
   pipelineStorage:
     deployAwsCompatibleStorage: true
   aws-compatible-storage:
