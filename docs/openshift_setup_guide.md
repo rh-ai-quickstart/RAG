@@ -360,64 +360,43 @@ If you want to use the pre-ingestion pipeline for batch document processing, con
 
 [Reference Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.8/html/working_on_data_science_projects/working-with-data-science-pipelines_ds-pipelines#configuring-a-pipeline-server_ds-pipelines)
 
-**Get MinIO credentials:**
+The `configure-pipeline` 0.6.0 chart configures DSPA with bundled S4 storage automatically. Document uploads use `documents`; DSPA pipeline artifacts use the separate `mlpipeline` bucket.
 
-```bash
-MINIO_API="https://$(oc get route minio-api -o jsonpath='{.spec.host}')"
-
-B64_USER=$(oc get secret minio -o jsonpath='{.data.username}')
-MINIO_USER=$(echo $B64_USER | base64 --decode)
-echo "user: $MINIO_USER"
-
-B64_PASSWORD=$(oc get secret minio -o jsonpath='{.data.password}')
-MINIO_PASSWORD=$(echo $B64_PASSWORD | base64 --decode)
-echo "password: $MINIO_PASSWORD"
+```yaml
+configure-pipeline:
+  aws-compatible-storage:
+    enabled: true
+    sampleFileUpload:
+      enabled: true
+      bucket: documents
+      # Keep the sample-document URLs from rag-values.yaml.example.
+  notebook:
+    s3:
+      bucketName: documents
+      region: us-east-1
 ```
 
-**Configure Kubeflow Pipeline:**
+Bundled credentials inherit the storage chart defaults. Override them with `configure-pipeline.aws-compatible-storage.s3.accessKeyId` and `secretAccessKey`, or the Make variables `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`. Service name and S3 port overrides propagate to DSPA and notebook connections automatically.
 
-Navigate to Kubeflow Pipelines in OpenShift AI and configure with these values:
+The notebook receives `AWS_S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` from the selected connection and storage Secrets. The generated dashboard connection Secret retains `ACCESS_KEY_ID` and `SECRET_ACCESS_KEY`. Notebook authentication is managed by the notebook controller through `inject-auth`.
 
-- **Access Key**: `minio_rag_user` (value of `$MINIO_USER`)
-- **Secret Key**: `minio_rag_password` (value of `$MINIO_PASSWORD`)
-- **Endpoint**: Value of `$MINIO_API`
-- **Region**: `us-east-1`
-- **Bucket**: `documents`
+To upload additional documents from the notebook:
 
-![KFP Configure](images/kfp-configure.png)
+```python
+import os
+import boto3
 
-**Using MinIO CLI (optional):**
-
-Install MinIO CLI:
-
-```bash
-brew install minio/stable/mc
+s3 = boto3.client(
+    "s3",
+    endpoint_url=os.environ["AWS_S3_ENDPOINT"],
+    aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+    region_name="us-east-1",
+)
+s3.upload_file("my.pdf", "documents", "my.pdf")
 ```
 
-Configure MinIO alias:
-
-```bash
-mc alias set minio $MINIO_API $MINIO_USER $MINIO_PASSWORD
-```
-
-Create bucket (if not present):
-
-```bash
-mc mb minio/documents
-```
-
-Upload documents:
-
-```bash
-mc cp ~/my-documents/my.pdf minio/documents
-```
-
-Access MinIO WebUI:
-
-```bash
-MINIO_WEB="https://$(oc get route minio-webui -o jsonpath='{.spec.host}')"
-open $MINIO_WEB
-```
+For external storage, set `configure-pipeline.aws-compatible-storage.enabled: false` and supply `pipelineStorage.externalStorage.host` and `pipelineStorage.externalStorage.s3CredentialsSecret.secretName` under `configure-pipeline`. Defaults are HTTPS/443 and Secret entries `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`. Set the external artifact bucket separately from the document bucket. Bundled `s3.existingSecret` is unsupported with both `notebook.create` and `secret.create` enabled; disable the notebook or manage its connection Secrets externally.
 
 Once configured, you can run the ingestion pipeline from the Jupyter notebook:
 

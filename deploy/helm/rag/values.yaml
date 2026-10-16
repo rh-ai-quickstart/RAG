@@ -178,13 +178,9 @@ llama-stack:
 
 configure-pipeline:
   enabled: true
-  pipelineStorage:
-    deployAwsCompatibleStorage: true
   aws-compatible-storage:
+    enabled: true
     fullnameOverride: aws-compatible-storage
-    s3:
-      accessKeyId: storageadmin
-      secretAccessKey: storagepassword
     auth:
       enabled: false
     route:
@@ -196,6 +192,10 @@ configure-pipeline:
       - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_Grand_Invention.pdf
       - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Tumble_Town.pdf
       - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
+  notebook:
+    s3:
+      bucketName: documents
+      region: us-east-1
 
 mcp-servers:
   enabled: true

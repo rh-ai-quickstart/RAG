@@ -23,8 +23,8 @@ VERSION ?= 0.2.22
 POSTGRES_USER ?= postgres
 POSTGRES_PASSWORD ?= rag_password
 POSTGRES_DBNAME ?= rag_blueprint
-S3_ACCESS_KEY_ID ?= storageadmin
-S3_SECRET_ACCESS_KEY ?= storagepassword
+S3_ACCESS_KEY_ID ?= s4admin
+S3_SECRET_ACCESS_KEY ?= s4secret
 # HF_TOKEN will be managed by the get_hf_token helper function
 INTERACTIVE ?= true
 RAG_CHART := rag

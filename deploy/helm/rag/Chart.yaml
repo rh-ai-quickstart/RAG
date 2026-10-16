@@ -15,7 +15,7 @@ dependencies:
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
     condition: llm-service.enabled
   - name: configure-pipeline
-    version: 0.5.12
+    version: 0.6.0
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
     condition: configure-pipeline.enabled
   - name: ingestion-pipeline
