@@ -64,20 +64,22 @@ hr-pipeline:
     # token: ""  # Optional for private repos
 ```
 
-#### S3/MinIO Source
+#### S3-compatible Source
+
+Use the endpoint and credentials for your S3-compatible storage.
 
 ```yaml
-minio-pipeline:
+s3-pipeline:
   enabled: true
-  name: "minio-vector-db"
+  name: "s3-vector-db"
   version: "1.0"
-  vector_store_name: "minio-vector-db-v1-0"
+  vector_store_name: "s3-vector-db-v1-0"
   source: S3
   config:
-    endpoint: "http://minio:9000"
+    endpoint: "http://aws-compatible-storage:7480"
     bucket: "documents"
-    access_key: "minio_rag_user"
-    secret_key: "minio_rag_password"
+    access_key: "s4admin"
+    secret_key: "s4secret"
     # prefix: "folder/"  # Optional
 ```
 
@@ -398,13 +400,13 @@ Never commit tokens or credentials. Use environment variables:
 ```yaml
 config:
   token: "${GITHUB_TOKEN}"
-  secret_key: "${MINIO_SECRET_KEY}"
+  secret_key: "${AWS_SECRET_ACCESS_KEY}"
 ```
 
 Set in shell before running:
 ```bash
 export GITHUB_TOKEN="ghp_xxx"
-export MINIO_SECRET_KEY="xxx"
+export AWS_SECRET_ACCESS_KEY="xxx"
 podman-compose up
 ```
 

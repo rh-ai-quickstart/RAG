@@ -293,13 +293,12 @@ fetch-and-store-pipeline-tmxwj-system-dag-driver-3443954210        0/2     Compl
 llama-3-2-3b-instruct-predictor-00001-deployment-6bbf96f8674677    3/3     Running     0          10m
 llamastack-6d5c5b999b-5lffb                                        1/1     Running     0          11m
 mariadb-dspa-74744d65bd-fdxjd                                      1/1     Running     0          10m
-minio-0                                                            1/1     Running     0          10m
-minio-dspa-7bb47d68b4-nvw7t                                        1/1     Running     0          10m
+aws-compatible-storage-5f667495b4-t55zl                            1/1     Running     0          10m
 pgvector-0                                                         1/1     Running     0          10m
 rag-7fd7b47844-nlfvr                                               1/1     Running     0          11m
 rag-mcp-weather-9cc97d574-nf5q8                                    1/1     Running     0          11m
 rag-pipeline-notebook-0                                            2/2     Running     0          10m
-upload-sample-docs-job-f5k5w                                       0/1     Completed   0          10m
+aws-compatible-storage-upload-sample-docs-gtpc9                    0/1     Completed   0          10m
 ```
 
 Verify deployment:
@@ -360,63 +359,22 @@ If you want to use the pre-ingestion pipeline for batch document processing, con
 
 [Reference Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.8/html/working_on_data_science_projects/working-with-data-science-pipelines_ds-pipelines#configuring-a-pipeline-server_ds-pipelines)
 
-**Get MinIO credentials:**
+The chart configures pipeline storage automatically. Sample documents use the `documents` bucket; pipeline artifacts use `mlpipeline`.
 
-```bash
-MINIO_API="https://$(oc get route minio-api -o jsonpath='{.spec.host}')"
+**Upload additional documents from the notebook:**
 
-B64_USER=$(oc get secret minio -o jsonpath='{.data.username}')
-MINIO_USER=$(echo $B64_USER | base64 --decode)
-echo "user: $MINIO_USER"
+The notebook receives its S3 endpoint and credentials through the `AWS_*` environment variables.
 
-B64_PASSWORD=$(oc get secret minio -o jsonpath='{.data.password}')
-MINIO_PASSWORD=$(echo $B64_PASSWORD | base64 --decode)
-echo "password: $MINIO_PASSWORD"
-```
+```python
+import os
+import boto3
 
-**Configure Kubeflow Pipeline:**
-
-Navigate to Kubeflow Pipelines in OpenShift AI and configure with these values:
-
-- **Access Key**: `minio_rag_user` (value of `$MINIO_USER`)
-- **Secret Key**: `minio_rag_password` (value of `$MINIO_PASSWORD`)
-- **Endpoint**: Value of `$MINIO_API`
-- **Region**: `us-east-1`
-- **Bucket**: `documents`
-
-![KFP Configure](images/kfp-configure.png)
-
-**Using MinIO CLI (optional):**
-
-Install MinIO CLI:
-
-```bash
-brew install minio/stable/mc
-```
-
-Configure MinIO alias:
-
-```bash
-mc alias set minio $MINIO_API $MINIO_USER $MINIO_PASSWORD
-```
-
-Create bucket (if not present):
-
-```bash
-mc mb minio/documents
-```
-
-Upload documents:
-
-```bash
-mc cp ~/my-documents/my.pdf minio/documents
-```
-
-Access MinIO WebUI:
-
-```bash
-MINIO_WEB="https://$(oc get route minio-webui -o jsonpath='{.spec.host}')"
-open $MINIO_WEB
+s3 = boto3.client(
+    "s3",
+    endpoint_url=os.environ["AWS_S3_ENDPOINT"],
+    region_name="us-east-1",
+)
+s3.upload_file("my.pdf", "documents", "my.pdf")
 ```
 
 Once configured, you can run the ingestion pipeline from the Jupyter notebook:
@@ -606,13 +564,12 @@ To add another model follow these steps:
     llama-guard-3-8b-predictor-00001-deployment-6cbff4965c-gzx5v        3/3     Running                  0             13m
     llamastack-7989d974fc-w24fn                                         1/1     Running                  0             13m
     mariadb-dspa-74744d65bd-kb2dh                                       1/1     Running                  0             35m
-    minio-0                                                             1/1     Running                  0             35m
-    minio-dspa-7bb47d68b4-kb722                                         1/1     Running                  0             35m
+    aws-compatible-storage-5f667495b4-t55zl                             1/1     Running                  0             35m
     pgvector-0                                                          1/1     Running                  0             35m
     rag-7fd7b47844-jkqtf                                                1/1     Running                  0             35m
     rag-mcp-weather-9cc97d574-s8vpt                                     1/1     Running                  0             35m
     rag-pipeline-notebook-0                                             2/2     Running                  0             35m
-    upload-sample-docs-job-952gj                                        0/1     Completed                0             35m
+    aws-compatible-storage-upload-sample-docs-gtpc9                     0/1     Completed                0             35m
     ```
 
 Return to the RAG UI and look into the **Inspect** tab to see the additional models and shields. 

@@ -7,7 +7,7 @@ dependencies:
   version: 0.5.10
 - name: configure-pipeline
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-  version: 0.5.9
+  version: 0.6.0
 - name: ingestion-pipeline
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.7.5
@@ -17,5 +17,5 @@ dependencies:
 - name: mcp-servers
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.5.18
-digest: sha256:e0a207e133ea7ff565c5431f00272829ae9d041ac0e4869472eb06ba6b44ba58
-generated: "2026-07-13T15:48:14.880319387-07:00"
+digest: sha256:a8e62688c141b47f2852fa11d62fc79275b8d16f81e1241c8afa82cae9f2f47f
+generated: "2026-10-16T11:38:20.223535-04:00"
