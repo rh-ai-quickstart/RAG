@@ -1,23 +1,9 @@
 replicaCount: 1
 
-# Pin the resource name instead of deriving it from the release name.
-# The default fullname template falls back to "<release-name>-rag" when the
-# release name doesn't already contain "rag" (see templates/_helpers.tpl).
-# If the release name starts with a digit (e.g. a GUID like "6rgl4", common
-# in ephemeral demo environments), that produces "6rgl4-rag" -- a valid
-# Deployment/Pod name (RFC 1123) but an INVALID Service name (Services must
-# satisfy the stricter RFC 1035, which disallows a leading digit). The
-# Service silently fails to create (SyncFailed under GitOps) while every
-# other resource comes up fine, which is confusing to debug. Pinning the
-# name here avoids the release name entirely, matching the approach the
-# llama-stack subchart already uses (nameOverride/fullnameOverride: llamastack).
-nameOverride: rag
-fullnameOverride: rag
-
 image:
   repository: quay.io/rh-ai-quickstart/llamastack-dist-ui
   pullPolicy: Always
-  tag: 0.2.46
+  tag: 0.2.47
 
 service:
   type: ClusterIP
@@ -179,15 +165,6 @@ pgvector:
     host: pgvector
     port: "5432"
 
-    # Upload sample files to the minio bucket 
-  sampleFileUpload:
-    enabled: true
-    bucket: documents
-    urls: 
-    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_Grand_Invention.pdf
-    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Tumble_Town.pdf
-    - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
-
 llama-stack:
   enabled: true
   fileProcessors:
@@ -201,19 +178,24 @@ llama-stack:
 
 configure-pipeline:
   enabled: true
-  minio:
-    secret:
-      user: minio_rag_user
-      password: minio_rag_password
-      host: minio
-      port: "9000"
+  aws-compatible-storage:
+    enabled: true
+    fullnameOverride: aws-compatible-storage
+    auth:
+      enabled: false
+    route:
+      enabled: false
     sampleFileUpload:
       enabled: true
       bucket: documents
-      urls: 
+      urls:
       - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_Grand_Invention.pdf
       - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Tumble_Town.pdf
       - https://raw.githubusercontent.com/rh-ai-quickstart/RAG/refs/heads/main/notebooks/zippity-zoo/Zippity_Zoo_and_the_Town_of_Whispering_Willows.pdf
+  notebook:
+    s3:
+      bucketName: documents
+      region: us-east-1
 
 mcp-servers:
   enabled: true
@@ -266,10 +248,6 @@ suggestedQuestions:
 # Ingestion Pipeline Configuration
 ingestion-pipeline:
   enabled: true
-  # Same reasoning as the top-level nameOverride/fullnameOverride above: pin
-  # the name so it doesn't depend on the release name being DNS-1035-safe.
-  nameOverride: ingestion-pipeline
-  fullnameOverride: ingestion-pipeline
   serviceAccount:
     create: true
     name: rag-pipeline-notebook
