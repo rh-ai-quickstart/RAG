@@ -20,7 +20,7 @@ This guide walks you through running a Llama Stack server locally using **Ollama
   - [Configuration](#configuration)
   - [Source Types](#source-types)
     - [GitHub Repository](#github-repository)
-    - [S3/MinIO Bucket](#s3minio-bucket)
+    - [S3-compatible Bucket](#s3-compatible-bucket)
     - [Direct URLs](#direct-urls)
   - [Managing Ingestion](#managing-ingestion)
 - [Using the RAG UI](#using-the-rag-ui)
@@ -352,15 +352,17 @@ config:
   # token: "ghp_xxx"  # Optional for private repos
 ```
 
-#### S3/MinIO Bucket
+#### S3-compatible Bucket
+
+The example uses the S4 defaults from the Helm storage chart. Set the endpoint to an S3 API reachable from the ingestion container and match its configured credentials. For S4 running on the Podman host, use `http://host.containers.internal:7480`; the local stack does not start object storage automatically.
 
 ```yaml
 source: S3
 config:
-  endpoint: "http://minio:9000"
+  endpoint: "http://aws-compatible-storage:7480"
   bucket: "documents"
-  access_key: "minio_user"
-  secret_key: "minio_password"
+  access_key: "s4admin"
+  secret_key: "s4secret"
   # prefix: "folder/"  # Optional
 ```
 
