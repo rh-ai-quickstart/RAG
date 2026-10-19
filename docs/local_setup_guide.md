@@ -354,7 +354,7 @@ config:
 
 #### S3-compatible Bucket
 
-The example uses the S4 defaults from the Helm storage chart. Set the endpoint to an S3 API reachable from the ingestion container and match its configured credentials. For S4 running on the Podman host, use `http://host.containers.internal:7480`; the local stack does not start object storage automatically.
+Use the endpoint and credentials for your S3-compatible storage.
 
 ```yaml
 source: S3

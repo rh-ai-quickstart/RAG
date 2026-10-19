@@ -66,7 +66,7 @@ hr-pipeline:
 
 #### S3-compatible Source
 
-The endpoint and demo credentials below match the Helm-bundled S4 service. For local ingestion, use an endpoint reachable from its container (for example, `http://host.containers.internal:7480` for S4 on the Podman host) and the credentials configured for that storage. The local stack does not start S4 automatically.
+Use the endpoint and credentials for your S3-compatible storage.
 
 ```yaml
 s3-pipeline:
